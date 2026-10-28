@@ -77,13 +77,8 @@ enum TetrominoType: Int, CaseIterable {
             return [oState, oState, oState, oState]
 
         case .i:
+            // State 0 is Straight Up (vertical)
             return [
-                [
-                    [0, 0, 0, 0],
-                    [1, 1, 1, 1],
-                    [0, 0, 0, 0],
-                    [0, 0, 0, 0]
-                ],
                 [
                     [0, 0, 1, 0],
                     [0, 0, 1, 0],
@@ -101,16 +96,18 @@ enum TetrominoType: Int, CaseIterable {
                     [0, 1, 0, 0],
                     [0, 1, 0, 0],
                     [0, 1, 0, 0]
+                ],
+                [
+                    [0, 0, 0, 0],
+                    [1, 1, 1, 1],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
                 ]
             ]
 
         case .l:
+            // State 0 is Facing Up (upright L)
             return [
-                [
-                    [0, 0, 1],
-                    [1, 1, 1],
-                    [0, 0, 0]
-                ],
                 [
                     [0, 1, 0],
                     [0, 1, 0],
@@ -125,11 +122,22 @@ enum TetrominoType: Int, CaseIterable {
                     [1, 1, 0],
                     [0, 1, 0],
                     [0, 1, 0]
+                ],
+                [
+                    [0, 0, 1],
+                    [1, 1, 1],
+                    [0, 0, 0]
                 ]
             ]
 
         case .j:
+            // State 0 is Facing Up (upright backwards L / J)
             return [
+                [
+                    [0, 1, 0],
+                    [0, 1, 0],
+                    [1, 1, 0]
+                ],
                 [
                     [1, 0, 0],
                     [1, 1, 1],
@@ -144,11 +152,6 @@ enum TetrominoType: Int, CaseIterable {
                     [0, 0, 0],
                     [1, 1, 1],
                     [0, 0, 1]
-                ],
-                [
-                    [0, 1, 0],
-                    [0, 1, 0],
-                    [1, 1, 0]
                 ]
             ]
 

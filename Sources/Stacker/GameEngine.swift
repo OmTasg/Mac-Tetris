@@ -29,13 +29,13 @@ final class GameEngine: ObservableObject {
     private var lockTimer: Int = 0
     private var isSoftDropping: Bool = false
 
-    // Fast, responsive DAS (Delayed Auto Shift) & ARR (Auto Repeat Rate)
+    // Perfectly tuned DAS (Delayed Auto Shift) & ARR (Auto Repeat Rate)
     private var isLeftHeld: Bool = false
     private var isRightHeld: Bool = false
     private var leftHoldTimer: Int = 0
     private var rightHoldTimer: Int = 0
-    private let dasDelay: Int = 4   // ~66ms quick transition into hold
-    private let arrSpeed: Int = 2   // smooth, fast glide every 2 frames (30 cols/sec)
+    private let dasDelay: Int = 5   // ~80ms quick transition into hold
+    private let arrSpeed: Int = 3   // 1 column every 3 frames = 20 cols/sec (smooth and controllable)
 
     private let bag = Bag()
     private var timer: Timer?
@@ -90,17 +90,22 @@ final class GameEngine: ObservableObject {
     private func spawnPiece(shapeIndex: Int) {
         guard let pieceType = TetrominoType(rawValue: shapeIndex) else { return }
         currentShapeIndex = shapeIndex
-        currentRotation = 0 // Always default rotation 0
+        currentRotation = 0 // Always default orientation (state 0)
         currentShape = pieceType.allRotationStates[0]
 
-        // Default canonical spawn position (centered horizontally in top area)
+        // Default canonical spawn positions (facing up / straight up above the red line)
         switch pieceType {
         case .o:
             gridX = 4
             gridY = 2
         case .i:
+            // Vertical straight-up piece
             gridX = 3
-            gridY = 1
+            gridY = 0 // Spans rows 0, 1, 2, 3 ending right at red line
+        case .l, .j:
+            // Upright L and backwards-L pieces
+            gridX = 3
+            gridY = 1 // Spans rows 1, 2, 3 ending right at red line
         default:
             gridX = 3
             gridY = 2
@@ -130,7 +135,7 @@ final class GameEngine: ObservableObject {
     func tick() {
         guard !isPaused && !isDead else { return }
 
-        // 1. Fast, smooth horizontal movement when holding keys
+        // 1. Smooth, controllable horizontal movement
         handleHolding()
 
         // 2. Discrete Gravity & Fall
