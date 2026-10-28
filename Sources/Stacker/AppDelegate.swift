@@ -155,7 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.engine.setRightHeld(isDown)
                 return nil
 
-            // Down Arrow (125) / 'S' (1): Soft Drop (smooth controlled fall)
+            // Down Arrow (125) / 'S' (1): Soft Drop (same smooth speed as horizontal move!)
             case 125, 1:
                 self.engine.setSoftDropping(isDown)
                 return nil
@@ -174,11 +174,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 return nil
 
-            // Spacebar (49): Hard drop while playing, or restart when dead!
+            // Spacebar (49): Unpause when paused, restart when dead, hard drop while playing!
             case 49:
                 if isDown {
                     if self.engine.isDead {
                         self.engine.startNewGame()
+                    } else if self.engine.isPaused {
+                        self.engine.togglePause()
                     } else {
                         self.engine.hardDrop()
                     }

@@ -119,7 +119,7 @@ struct GameView: View {
                             }
                         }
                         .buttonStyle(.plain)
-                        .help("Pause / Resume (P)")
+                        .help("Pause / Resume (P or Space)")
                     }
                     .padding(.horizontal, 14)
                     .padding(.top, 10)
@@ -190,9 +190,9 @@ struct GameView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(Color.white.opacity(0.3), lineWidth: 1)
                         )
-                        Text("Press P or click Play to Resume")
-                            .font(.system(size: 12))
-                            .foregroundColor(.gray)
+                        Text("Press Space to Resume")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.85))
                             .padding(.top, 6)
                     }
                     .frame(width: GameConfig.gameWidth)
@@ -223,7 +223,7 @@ struct GameView: View {
 
                 Spacer()
 
-                Text("Space: Drop • Hold: Move • P: Pause")
+                Text("Space: Drop/Play • P: Pause")
                     .font(.system(size: 10))
                     .foregroundColor(.gray.opacity(0.7))
 

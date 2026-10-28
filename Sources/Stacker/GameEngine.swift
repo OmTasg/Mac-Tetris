@@ -29,13 +29,15 @@ final class GameEngine: ObservableObject {
     private var lockTimer: Int = 0
     private var isSoftDropping: Bool = false
 
-    // Perfectly tuned DAS (Delayed Auto Shift) & ARR (Auto Repeat Rate)
+    // Symmetrical, perfectly matched movement speeds (Horizontal & Vertical: 4 frames / cell)
     private var isLeftHeld: Bool = false
     private var isRightHeld: Bool = false
     private var leftHoldTimer: Int = 0
     private var rightHoldTimer: Int = 0
-    private let dasDelay: Int = 5   // ~80ms quick transition into hold
-    private let arrSpeed: Int = 3   // 1 column every 3 frames = 20 cols/sec (smooth and controllable)
+    private let dasDelay: Int = 5   // ~80ms hold threshold
+    private let arrSpeed: Int = 4   // 1 column every 4 frames = 15 cols/sec
+    private let softDropSpeed: Int = 4 // 1 row every 4 frames = 15 rows/sec (exact same speed!)
+    private let normalGravitySpeed: Int = 25
 
     private let bag = Bag()
     private var timer: Timer?
@@ -90,22 +92,19 @@ final class GameEngine: ObservableObject {
     private func spawnPiece(shapeIndex: Int) {
         guard let pieceType = TetrominoType(rawValue: shapeIndex) else { return }
         currentShapeIndex = shapeIndex
-        currentRotation = 0 // Always default orientation (state 0)
+        currentRotation = 0
         currentShape = pieceType.allRotationStates[0]
 
-        // Default canonical spawn positions (facing up / straight up above the red line)
         switch pieceType {
         case .o:
             gridX = 4
             gridY = 2
         case .i:
-            // Vertical straight-up piece
             gridX = 3
-            gridY = 0 // Spans rows 0, 1, 2, 3 ending right at red line
+            gridY = 0
         case .l, .j:
-            // Upright L and backwards-L pieces
             gridX = 3
-            gridY = 1 // Spans rows 1, 2, 3 ending right at red line
+            gridY = 1
         default:
             gridX = 3
             gridY = 2
@@ -135,16 +134,16 @@ final class GameEngine: ObservableObject {
     func tick() {
         guard !isPaused && !isDead else { return }
 
-        // 1. Smooth, controllable horizontal movement
+        // 1. Smooth horizontal movement when holding keys (4 frames / step)
         handleHolding()
 
-        // 2. Discrete Gravity & Fall
+        // 2. Discrete Gravity & Fall (Soft drop matches horizontal speed: 4 frames / step)
         let canFall = canPlace(shape: currentShape, atX: gridX, atY: gridY + 1)
 
         if canFall {
             lockTimer = 0
             gravityCounter += 1
-            let dropInterval = isSoftDropping ? 5 : 25
+            let dropInterval = isSoftDropping ? softDropSpeed : normalGravitySpeed
 
             if gravityCounter >= dropInterval {
                 gravityCounter = 0
@@ -331,7 +330,7 @@ final class GameEngine: ObservableObject {
             return
         }
 
-        // Immediately clear completed lines (No delay or animation)
+        // Immediately clear completed lines
         var cleared = 0
         var lineClearScore = 0.0
 
@@ -350,7 +349,6 @@ final class GameEngine: ObservableObject {
             score += Int(round(lineClearScore))
         }
 
-        // Spawn next piece always in default rotation and position
         currentShapeIndex = nextShapeIndex
         nextShapeIndex = bag.grabIndex()
         spawnPiece(shapeIndex: currentShapeIndex)
