@@ -22,7 +22,6 @@ struct GameView: View {
                             width: cell,
                             height: cell
                         )
-                        // Faint border for each cell
                         context.stroke(
                             Path(rect),
                             with: .color(Color.white.opacity(0.04)),
@@ -56,30 +55,7 @@ struct GameView: View {
                     }
                 }
 
-                // 3. Draw Ghost Piece (Faint Landing Projection)
-                if !engine.isDead && !engine.isPaused {
-                    let shape = engine.currentShape
-                    let ghostY = engine.ghostY
-                    for r in 0..<shape.count {
-                        for c in 0..<shape[r].count {
-                            if shape[r][c] != 0 {
-                                let rect = CGRect(
-                                    x: Double(engine.gridX + c) * cell + 0.5,
-                                    y: (ghostY + Double(r)) * cell + 0.5,
-                                    width: cell - 1.0,
-                                    height: cell - 1.0
-                                )
-                                context.stroke(
-                                    Path(rect),
-                                    with: .color(engine.currentColor.opacity(0.35)),
-                                    lineWidth: 1.0
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 4. Draw Active Falling Tetromino (Strict Grid-Aligned)
+                // 3. Draw Active Falling Tetromino (Strict Discrete Grid Positions)
                 if !engine.isDead {
                     let shape = engine.currentShape
                     for r in 0..<shape.count {
@@ -87,7 +63,7 @@ struct GameView: View {
                             if shape[r][c] != 0 {
                                 let rect = CGRect(
                                     x: Double(engine.gridX + c) * cell + 0.5,
-                                    y: (engine.currentY + Double(r)) * cell + 0.5,
+                                    y: Double(engine.gridY + r) * cell + 0.5,
                                     width: cell - 1.0,
                                     height: cell - 1.0
                                 )
@@ -268,7 +244,7 @@ struct GameView: View {
 
                     Spacer()
 
-                    Text("Space: Drop • P: Pause")
+                    Text("Space: Drop • Hold: Move • P: Pause")
                         .font(.system(size: 10))
                         .foregroundColor(.gray.opacity(0.7))
 

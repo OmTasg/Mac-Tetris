@@ -3,7 +3,7 @@ import Foundation
 struct SavedGameState: Codable {
     let arenaMatrix: [[Int]]
     let gridX: Int
-    let currentY: Double
+    let gridY: Int
     let currentShapeIndex: Int
     let currentRotation: Int
     let nextShapeIndex: Int

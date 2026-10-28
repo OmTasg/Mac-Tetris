@@ -15,7 +15,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupKeyMonitor()
         setupAutoPauseObservers()
 
-        // Automatically show the popup on initial launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.showPanel()
         }
@@ -96,7 +95,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.isUserRepositioned = true
         }
 
-        // Auto pause on window resign key (clicking outside)
         NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: panel,
@@ -106,7 +104,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // Auto-pause when user clicks outside anywhere on screen
     private func setupAutoPauseObservers() {
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             guard let self = self, self.panel.isVisible else { return }
@@ -149,7 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.orderOut(nil)
     }
 
-    // MARK: - Keyboard Monitoring
+    // MARK: - Keyboard Monitoring with Key Hold Support
     private func setupKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
             guard let self = self, self.panel.isVisible else { return event }
@@ -157,18 +154,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let isDown = event.type == .keyDown
 
             switch event.keyCode {
-            // Left Arrow (123) / 'A' (0): Discrete grid step left
+            // Left Arrow (123) / 'A' (0): Hold to move continuously
             case 123, 0:
-                if isDown {
-                    self.engine.moveLeft()
-                }
+                self.engine.setLeftHeld(isDown)
                 return nil
 
-            // Right Arrow (124) / 'D' (2): Discrete grid step right
+            // Right Arrow (124) / 'D' (2): Hold to move continuously
             case 124, 2:
-                if isDown {
-                    self.engine.moveRight()
-                }
+                self.engine.setRightHeld(isDown)
                 return nil
 
             // Down Arrow (125) / 'S' (1): Soft Drop
@@ -190,7 +183,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 return nil
 
-            // Spacebar (49): Hard Drop automatically to the bottom
+            // Spacebar (49): Hard Drop immediately to the bottom
             case 49:
                 if isDown {
                     self.engine.hardDrop()
@@ -220,7 +213,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             default:
                 if isDown && self.engine.isDead {
-                    // Any key restarts when dead
                     self.engine.startNewGame()
                     return nil
                 }
@@ -229,7 +221,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Tetris Menu Bar Icon Drawing
+    // MARK: - Tetris Menu Bar Icon
     private func createTetrisMenuBarIcon() -> NSImage {
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size, flipped: false) { _ in
