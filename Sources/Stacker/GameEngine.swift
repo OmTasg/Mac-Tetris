@@ -51,6 +51,7 @@ final class GameEngine: ObservableObject {
     private let maxLockResets: Int = 15
     private let standardLockDelay: Int = 30 // 30 frames = 0.5s lock delay
     private var isSoftDropping: Bool = false
+    private var pieceSequence: Int = 0
 
     // Symmetrical, perfectly matched movement speeds (Horizontal & Vertical: 4 frames / cell)
     private var isLeftHeld: Bool = false
@@ -212,7 +213,9 @@ final class GameEngine: ObservableObject {
         }
 
         // 1. Smooth horizontal movement when holding keys
+        let startSeq = pieceSequence
         handleHolding()
+        if pieceSequence != startSeq { return }
 
         // 2. Discrete Gravity & Fall
         let canFall = canPlace(shape: currentShape, atX: gridX, atY: gridY + 1)
@@ -229,20 +232,74 @@ final class GameEngine: ObservableObject {
                     score += 1
                     ScoreHistoryManager.shared.recordSoftDrop()
                 }
+
+                // If piece just landed and completes a line, clear instantly with zero pause!
+                if checkInstantLineClearOnRest() {
+                    return
+                }
             }
         } else {
             // Block resting on floor or on top of another block
+            // Instant line clear check: no pause when completing lines!
+            if checkInstantLineClearOnRest() {
+                return
+            }
+
             lockTimer += 1
-            let lockThreshold = isSoftDropping ? 16 : standardLockDelay
+            let lockThreshold = isSoftDropping ? 6 : standardLockDelay
 
             if lockTimer >= lockThreshold {
-                mergeCurrentPiece()
-                score += 10
-                lockTimer = 0
-                gravityCounter = 0
-                lockResets = 0
+                lockPiece()
             }
         }
+    }
+
+    // MARK: - Line Completion Pre-Check & Instant Lock
+    func wouldCompleteAnyLine() -> Bool {
+        for r in 0..<currentShape.count {
+            let boardRow = gridY + r
+            guard boardRow >= 0 && boardRow < GameConfig.rows else { continue }
+            guard currentShape[r].contains(where: { $0 != 0 }) else { continue }
+
+            var rowComplete = true
+            for c in 0..<GameConfig.columns {
+                if arena[boardRow][c] > 0 {
+                    continue
+                }
+                let pieceCol = c - gridX
+                if pieceCol >= 0 && pieceCol < currentShape[r].count && currentShape[r][pieceCol] != 0 {
+                    continue
+                }
+                rowComplete = false
+                break
+            }
+            if rowComplete {
+                return true
+            }
+        }
+        return false
+    }
+
+    @discardableResult
+    private func checkInstantLineClearOnRest() -> Bool {
+        guard !isDead && !isPaused else { return false }
+        if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
+            if wouldCompleteAnyLine() {
+                lockPiece()
+                return true
+            }
+        }
+        return false
+    }
+
+    private func lockPiece() {
+        guard !isDead && !isPaused else { return }
+        mergeCurrentPiece()
+        score += 10
+        lockTimer = 0
+        gravityCounter = 0
+        lockResets = 0
+        pieceSequence &+= 1
     }
 
     private func flushActiveTime(persist: Bool = false) {
@@ -306,6 +363,7 @@ final class GameEngine: ObservableObject {
         if canPlace(shape: currentShape, atX: gridX - 1, atY: gridY) {
             gridX -= 1
             onPieceMovedOrRotated()
+            checkInstantLineClearOnRest()
         }
     }
 
@@ -314,10 +372,23 @@ final class GameEngine: ObservableObject {
         if canPlace(shape: currentShape, atX: gridX + 1, atY: gridY) {
             gridX += 1
             onPieceMovedOrRotated()
+            checkInstantLineClearOnRest()
         }
     }
 
     func setSoftDropping(_ active: Bool) {
+        if active && !isSoftDropping {
+            // Immediate soft drop step on initial press
+            if canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
+                gridY += 1
+                gravityCounter = 0
+                score += 1
+                ScoreHistoryManager.shared.recordSoftDrop()
+                checkInstantLineClearOnRest()
+            } else {
+                checkInstantLineClearOnRest()
+            }
+        }
         isSoftDropping = active
     }
 
@@ -337,8 +408,7 @@ final class GameEngine: ObservableObject {
         ScoreHistoryManager.shared.recordHardDrop(rows: rowsDropped)
 
         gridY = targetY
-        mergeCurrentPiece()
-        score += 10
+        lockPiece()
     }
 
     // MARK: - Linear Rotation with Wall Kicks
@@ -358,6 +428,7 @@ final class GameEngine: ObservableObject {
                 currentRotation = nextRot
                 currentShape = testShape
                 onPieceMovedOrRotated()
+                checkInstantLineClearOnRest()
                 return
             }
         }
