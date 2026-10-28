@@ -92,6 +92,7 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
         let rect = NSRect(x: 0, y: 0, width: width, height: height)
 
         panel = FloatingGamePanel(contentRect: rect)
+        panel.alphaValue = CGFloat(ThemeManager.shared.paneOpacity)
 
         let hostingView = ClickableHostingView(rootView: GameView(engine: engine))
         hostingView.frame = rect
@@ -185,6 +186,10 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
         engine.stopLoop()
         panel.orderOut(nil)
         removeGlobalMonitors()
+    }
+
+    func updatePanelOpacity(_ opacity: Double) {
+        panel?.alphaValue = CGFloat(max(0.3, min(1.0, opacity)))
     }
 
     // MARK: - Keyboard Monitoring with Key Hold Support

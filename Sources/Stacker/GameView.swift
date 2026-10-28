@@ -220,13 +220,13 @@ struct GameView: View {
 
             // Minimal Footer (Below canvas, never overlapping Row 17)
             HStack {
-                HStack(spacing: 8) {
+                HStack(spacing: 7) {
                     Button(action: {
                         engine.activeModalTab = .leaderboard
                         engine.showHistory = true
                     }) {
                         Text("🏆 Scores")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10))
                             .foregroundColor(.gray)
                     }
                     .buttonStyle(.plain)
@@ -236,7 +236,17 @@ struct GameView: View {
                         engine.showHistory = true
                     }) {
                         Text("📊 Stats")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: {
+                        engine.activeModalTab = .style
+                        engine.showHistory = true
+                    }) {
+                        Text("🎨 Style")
+                            .font(.system(size: 10))
                             .foregroundColor(.gray)
                     }
                     .buttonStyle(.plain)

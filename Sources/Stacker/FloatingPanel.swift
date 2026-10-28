@@ -18,7 +18,7 @@ final class FloatingGamePanel: NSPanel {
         self.isMovableByWindowBackground = true
         self.hasShadow = true
         self.backgroundColor = .black
-        self.isOpaque = true
+        self.isOpaque = false
 
         // Rounded corners
         if let contentView = self.contentView {

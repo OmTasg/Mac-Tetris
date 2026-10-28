@@ -39,7 +39,7 @@ enum TetrominoType: Int, CaseIterable {
     }
 
     var color: Color {
-        Color(hex: hexColor)
+        ThemeManager.shared.color(forType: self)
     }
 
     // All 4 pre-calculated SRS standard rotation states:
@@ -250,9 +250,6 @@ extension Color {
     }
 
     static func fromIndex(_ index: Int) -> Color {
-        guard let piece = TetrominoType(rawValue: index - 1) else {
-            return .clear
-        }
-        return piece.color
+        ThemeManager.shared.color(forBlockIndex: index)
     }
 }

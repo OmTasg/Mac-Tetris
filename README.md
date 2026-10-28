@@ -55,6 +55,19 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
       - **Piece Radar**: 7-bag tetromino placement distribution and favorite/most dropped piece.
   - Active time tracking **strictly counts active gameplay only** (freezes while paused, dead, or backgrounded).
 
+- **Customizable Themes & Window Transparency Slider**:
+  - Accessible via **"🎨 Style"** in the footer or the **Style** tab inside the popup sheet:
+    - **Pane Transparency Slider**: Adjust window opacity from 30% to 100% with live feedback and quick presets (`Solid`, `85%`, `70%`, `50%`), letting you see your wallpaper, browser, or code editor underneath the game.
+    - **7 Handcrafted Color Themes**: One-click instant palette swapping:
+      - ⚡️ *Neon Cyberpunk* (Default authentic Stacker neon)
+      - 🕹️ *Retro Arcade* (Classic 80s NES arcade palette)
+      - 🌿 *Nordic Pastel* (Soft matte pastels)
+      - 👾 *Game Boy 1989* (Nostalgic 4-shade greenish LCD)
+      - ⚪️ *Monochrome Minimal* (Clean Apple grayscale)
+      - 🔮 *Synthwave / Dracula* (Midnight purple & electric glow)
+      - 🌅 *Sunset Horizon* (Warm dusk amber, coral & violet)
+    - Preferences are saved automatically and remembered across launches.
+
 ---
 
 ## 🎮 Controls
