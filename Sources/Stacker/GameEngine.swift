@@ -385,6 +385,13 @@ final class GameEngine: ObservableObject {
         }
     }
 
+    func unpause() {
+        guard !isDead && isPaused else { return }
+        flushActiveTime(persist: true)
+        isPaused = false
+        startLoop()
+    }
+
     // MARK: - Discrete Collision & Boundary Check
     func canPlace(shape: [[Int]], atX testX: Int, atY testY: Int) -> Bool {
         for r in 0..<shape.count {

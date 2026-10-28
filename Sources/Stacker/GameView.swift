@@ -81,6 +81,43 @@ struct GameView: View {
                 .buttonStyle(.plain)
                 .offset(y: GameConfig.redLineY + 12)
 
+                // Paused Badge Overlay (Click anywhere inside canvas or press Space to unpause!)
+                if engine.isPaused && !engine.isDead {
+                    ZStack {
+                        // Full-canvas tap target to unpause immediately when clicking anywhere
+                        Color.black.opacity(0.18)
+
+                        VStack(spacing: 8) {
+                            Spacer().frame(height: 240)
+                            HStack(spacing: 8) {
+                                Image(systemName: "pause.circle.fill")
+                                    .font(.system(size: 22))
+                                Text("PAUSED")
+                                    .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.black.opacity(0.85))
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+
+                            Text("Click anywhere or Space to Resume")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white.opacity(0.85))
+                                .padding(.top, 6)
+                        }
+                    }
+                    .frame(width: GameConfig.gameWidth, height: GameConfig.gameHeight)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        engine.unpause()
+                    }
+                }
+
                 // Header UI (Top Controls & Score - No Restart Button)
                 VStack(spacing: 2) {
                     HStack(alignment: .center) {
@@ -170,37 +207,6 @@ struct GameView: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         engine.startNewGame()
-                    }
-                }
-
-                // Paused Badge Overlay
-                if engine.isPaused && !engine.isDead {
-                    VStack {
-                        Spacer().frame(height: 240)
-                        HStack(spacing: 8) {
-                            Image(systemName: "pause.circle.fill")
-                                .font(.system(size: 22))
-                            Text("PAUSED")
-                                .font(.system(size: 20, weight: .bold, design: .monospaced))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(Color.black.opacity(0.85))
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                        )
-                        Text("Press Space to Resume")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.85))
-                            .padding(.top, 6)
-                    }
-                    .frame(width: GameConfig.gameWidth)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        engine.togglePause()
                     }
                 }
 

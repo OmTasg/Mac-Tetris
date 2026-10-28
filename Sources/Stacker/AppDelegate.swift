@@ -79,6 +79,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.terminate(nil)
     }
 
+final class ClickableHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        return true
+    }
+}
+
     // MARK: - Floating Panel Setup
     private func setupPanel() {
         let width = GameConfig.gameWidth
@@ -87,7 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panel = FloatingGamePanel(contentRect: rect)
 
-        let hostingView = NSHostingView(rootView: GameView(engine: engine))
+        let hostingView = ClickableHostingView(rootView: GameView(engine: engine))
         hostingView.frame = rect
         panel.contentView = hostingView
 
