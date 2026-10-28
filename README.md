@@ -11,20 +11,21 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
   - Clicking the icon toggles the game window directly underneath.
   - **Always on top**: Floats above all other applications (`NSWindow.Level.floating`).
   - **Auto-Pause on Blur**: Clicking outside the app or switching apps automatically pauses the game.
-  - **Draggable**: Drag anywhere on screen by clicking and dragging the window.
+  - **Draggable**: Drag anywhere on screen by clicking and moving the window.
 
-- **Strict Grid Alignment & Boundaries**:
-  - The falling piece is strictly locked to discrete grid columns.
-  - Under no circumstances can blocks ever extend outside the screen boundaries.
-  - Subtle background grid guides clearly illustrate the grid structure.
-  - Faint **ghost piece projection** displays the exact landing position at the bottom.
+- **Strict Grid Alignment & Visibility**:
+  - All 18 rows are completely visible; the bottom row rests flush on top of the footer with zero obstruction.
+  - Subtle background grid outlines clearly delineate the 10×18 playing field.
+  - Smooth, lag-free key holding (DAS/ARR) glides seamlessly across columns.
+  - Controlled, smooth soft drop speed when holding Down / S.
 
 - **Linear, Reliable Flips (Rotations)**:
-  - Clean, linear 90° rotations using standard 4-state rotation models.
+  - Clean, linear 90° rotations using standard 4-state SRS rotation matrices.
   - Wall-kick system prevents rotations from clipping through walls or colliding with settled blocks.
 
 - **Hard Drop (Spacebar)**:
-  - Pressing **Spacebar** instantly hard-drops the tetromino to the bottom, locks it in place, checks for line clears, and awards bonus points.
+  - Pressing **Spacebar** instantly hard-drops the tetromino to the bottom and locks it.
+  - Pressing **Spacebar** after dying instantly restarts the game!
 
 - **Exact Scoring Formula**:
   - **Piece Placement**: `+10` points for merging a block.
@@ -51,14 +52,14 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
 
 | Action | Primary Key | Secondary Key |
 | :--- | :--- | :--- |
-| **Move Left** | `Left Arrow` | `A` |
-| **Move Right** | `Right Arrow` | `D` |
-| **Soft Drop** | `Down Arrow` | `S` |
-| **Hard Drop (Instant Bottom)** | `Spacebar` | — |
+| **Move Left** | `Left Arrow` | `A` (Hold to glide smoothly) |
+| **Move Right** | `Right Arrow` | `D` (Hold to glide smoothly) |
+| **Soft Drop** | `Down Arrow` | `S` (Smooth controlled fall) |
+| **Hard Drop (Play)** | `Spacebar` | — |
+| **Restart (After Dying)** | `Spacebar` | Click anywhere |
 | **Rotate Clockwise** | `Up Arrow` | `W` or `E` |
 | **Rotate Counter-Clockwise** | `Q` | — |
 | **Pause / Resume** | `P` | Click `❚❚` / `▶` |
-| **Restart Game** | `R` | Click `⟲` button |
 | **Close / Hide Popup** | `Escape` | Click Menu Bar icon |
 
 ---
