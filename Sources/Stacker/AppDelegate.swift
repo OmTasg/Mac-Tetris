@@ -7,7 +7,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let engine = GameEngine()
     private var keyMonitor: Any?
     private var globalClickMonitor: Any?
-    private var isUserRepositioned = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -88,14 +87,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.contentView = hostingView
 
         NotificationCenter.default.addObserver(
-            forName: NSWindow.didMoveNotification,
-            object: panel,
-            queue: .main
-        ) { [weak self] _ in
-            self?.isUserRepositioned = true
-        }
-
-        NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: panel,
             queue: .main
@@ -124,16 +115,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // Always auto-open in the top right corner of the screen
     func showPanel() {
-        if !isUserRepositioned, let button = statusItem.button, let screen = button.window?.screen {
-            let buttonFrame = button.window?.convertToScreen(button.frame) ?? .zero
+        if let screen = NSScreen.main ?? NSScreen.screens.first {
             let panelWidth = GameConfig.gameWidth
             let panelHeight = GameConfig.totalHeight
+            let margin: CGFloat = 12.0
 
-            var x = buttonFrame.midX - (panelWidth / 2)
-            let y = buttonFrame.minY - panelHeight - 6
+            let x = screen.visibleFrame.maxX - panelWidth - margin
+            let y = screen.visibleFrame.maxY - panelHeight - margin
 
-            x = max(screen.visibleFrame.minX + 8, min(x, screen.visibleFrame.maxX - panelWidth - 8))
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
 
