@@ -5,7 +5,7 @@ struct NextPieceView: View {
 
     var body: some View {
         let piece = TetrominoType(rawValue: shapeIndex) ?? .t
-        let matrix = piece.matrix
+        let matrix = piece.defaultMatrix
         let color = piece.color
         let miniCell: CGFloat = 8.0
 
@@ -44,4 +44,3 @@ struct NextPieceView: View {
         )
     }
 }
-

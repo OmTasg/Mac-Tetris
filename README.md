@@ -1,40 +1,36 @@
 # Stacker - Falling Tetra Blocks (macOS)
 
-A native macOS floating menu bar recreation of the popular browser puzzle game **Stacker - Falling Tetra Blocks**, matching the authentic visuals, smooth physics, exact scoring formulas, persistent game state, and local high score history.
+A native macOS floating menu bar recreation of the popular browser puzzle game **Stacker - Falling Tetra Blocks**, matching the authentic visuals, exact scoring formulas, persistent game state, and local high score history.
 
 ---
 
 ## ✨ Features
 
 - **Menu Bar Icon & Floating Popup**:
-  - Sits neatly in the top macOS menu bar with a custom Tetris icon.
-  - Clicking the icon pops up the game window directly underneath.
-  - **Always on top**: Floats above all other applications and full-screen windows (`NSWindow.Level.floating`).
-  - **Draggable**: Drag anywhere on screen by clicking and moving the background.
+  - Sits in the top macOS menu bar with a custom Tetris icon.
+  - Clicking the icon toggles the game window directly underneath.
+  - **Always on top**: Floats above all other applications (`NSWindow.Level.floating`).
+  - **Auto-Pause on Blur**: Clicking outside the app or switching apps automatically pauses the game.
+  - **Draggable**: Drag anywhere on screen by clicking and dragging the window.
 
-- **Exact Visuals & Mechanics**:
-  - Exact color scheme, typography, and layout from *Stacker*:
-    - **T-piece**: `#FF0D72` (Hot Pink)
-    - **O-piece**: `#0DC2FF` (Cyan)
-    - **I-piece**: `#0DFF72` (Neon Green)
-    - **L-piece**: `#F538FF` (Magenta)
-    - **J-piece**: `#FF8E0D` (Orange)
-    - **S-piece**: `#FFE138` (Yellow)
-    - **Z-piece**: `#3877FF` (Royal Blue)
-  - Solid, flat, borderless tetromino blocks.
-  - Smooth tile sliding (`easeTo`) and smooth rotation interpolation.
-  - Smooth animated collapse when lines are cleared.
-  - Red ceiling limit line at Row 4.
-  - Large centered bold score display.
-  - "You died" game over notification when blocks cross the red line.
+- **Strict Grid Alignment & Boundaries**:
+  - The falling piece is strictly locked to discrete grid columns.
+  - Under no circumstances can blocks ever extend outside the screen boundaries.
+  - Subtle background grid guides clearly illustrate the grid structure.
+  - Faint **ghost piece projection** displays the exact landing position at the bottom.
 
-- **Next Piece Indicator**:
-  - Integrated directly at the very top of the header bar, previewing the upcoming tetromino with its exact shape and color.
+- **Linear, Reliable Flips (Rotations)**:
+  - Clean, linear 90° rotations using standard 4-state rotation models.
+  - Wall-kick system prevents rotations from clipping through walls or colliding with settled blocks.
+
+- **Hard Drop (Spacebar)**:
+  - Pressing **Spacebar** instantly hard-drops the tetromino to the bottom, locks it in place, checks for line clears, and awards bonus points.
 
 - **Exact Scoring Formula**:
-  - **Piece Lock**: `+10` points for merging a block.
+  - **Piece Placement**: `+10` points for merging a block.
   - **Soft Drop / Boost**: `+1` point per row while holding Down / S.
-  - **Line Clear Multiplier**:
+  - **Hard Drop**: `+2` points per row dropped with Spacebar.
+  - **Line Clear Compound Multiplier**:
     - 1 line: `75` points
     - 2 lines: `188` points (`75 * 1.5 + 75 = 187.5`)
     - 3 lines: `356` points (`187.5 * 1.5 + 75 = 356.25`)
@@ -43,10 +39,10 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
 - **State Persistence (Close & Reopen)**:
   - Game state automatically serializes to `~/Library/Application Support/Stacker/gamestate.json`.
   - Remembers the exact board matrix, current falling piece position, current rotation, upcoming piece, score, and high score.
-  - When reopened, restores seamlessly and opens in paused mode so you never lose a block unexpectedly.
+  - Reopens in paused state so you never lose a block unexpectedly.
 
 - **Local High Score History**:
-  - High scores saved locally to `~/Library/Application Support/Stacker/scores.json`.
+  - Saved locally to `~/Library/Application Support/Stacker/scores.json`.
   - Click on **"High score: ..."** or **"🏆 Scores"** to view the Top 50 leaderboard with dates and lines cleared.
 
 ---
@@ -57,10 +53,11 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
 | :--- | :--- | :--- |
 | **Move Left** | `Left Arrow` | `A` |
 | **Move Right** | `Right Arrow` | `D` |
-| **Soft Drop (Boost)** | `Down Arrow` | `S` |
+| **Soft Drop** | `Down Arrow` | `S` |
+| **Hard Drop (Instant Bottom)** | `Spacebar` | — |
 | **Rotate Clockwise** | `Up Arrow` | `W` or `E` |
 | **Rotate Counter-Clockwise** | `Q` | — |
-| **Pause / Resume** | `Spacebar` | Click `❚❚` / `▶` |
+| **Pause / Resume** | `P` | Click `❚❚` / `▶` |
 | **Restart Game** | `R` | Click `⟲` button |
 | **Close / Hide Popup** | `Escape` | Click Menu Bar icon |
 
@@ -76,4 +73,3 @@ Or open directly:
 ```bash
 open Stacker.app
 ```
-

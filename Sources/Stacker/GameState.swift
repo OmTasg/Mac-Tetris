@@ -2,11 +2,10 @@ import Foundation
 
 struct SavedGameState: Codable {
     let arenaMatrix: [[Int]]
-    let currentX: Double
+    let gridX: Int
     let currentY: Double
     let currentShapeIndex: Int
     let currentRotation: Int
-    let currentShape: [[Int]]
     let nextShapeIndex: Int
     let bag: [Int]
     let score: Int
@@ -46,4 +45,3 @@ final class StateManager {
         try? FileManager.default.removeItem(at: fileURL)
     }
 }
-

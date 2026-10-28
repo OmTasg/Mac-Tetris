@@ -4,13 +4,11 @@ import Combine
 
 final class GameEngine: ObservableObject {
     @Published var arena: [[Int]]
-    @Published var currentX: Double = 0
-    @Published var currentY: Double = 0
+    @Published var gridX: Int = 3
+    @Published var currentY: Double = 1.0
     @Published var currentShape: [[Int]] = []
     @Published var currentShapeIndex: Int = 0
     @Published var currentRotation: Int = 0
-    @Published var rotationDeg: Double = 0
-    private var rotationDegGoal: Double = 0
 
     @Published var nextShapeIndex: Int = 0
     @Published var score: Int = 0 {
@@ -25,20 +23,12 @@ final class GameEngine: ObservableObject {
     @Published var isDead: Bool = false
     @Published var isPaused: Bool = false
     @Published var showHistory: Bool = false
+    @Published var isSoftDropping: Bool = false
 
     // Smooth line clear animation
     @Published var lineClearOffset: Double = 0
     @Published var lineClearBreakRow: Int? = nil
     private var lineClearYV: Double = 0
-
-    // Key states
-    private var isLeftPressed = false
-    private var isRightPressed = false
-    private var isDownPressed = false
-    private var rotateTimer = 0
-
-    private var velX: Double = 0
-    private var velY: Double = 0
 
     private let bag = Bag()
     private var timer: Timer?
@@ -50,20 +40,19 @@ final class GameEngine: ObservableObject {
         if let saved = StateManager.shared.loadState(), !saved.isDead {
             // Restore from saved state
             self.arena = saved.arenaMatrix
-            self.currentX = saved.currentX
+            self.gridX = saved.gridX
             self.currentY = saved.currentY
             self.currentShapeIndex = saved.currentShapeIndex
             self.currentRotation = saved.currentRotation
-            self.currentShape = saved.currentShape
+            let piece = TetrominoType(rawValue: saved.currentShapeIndex) ?? .t
+            self.currentShape = piece.allRotationStates[saved.currentRotation % 4]
             self.nextShapeIndex = saved.nextShapeIndex
             self.bag.setBag(saved.bag)
             self.score = saved.score
             self.highscore = max(saved.highscore, ScoreHistoryManager.shared.highestScore)
             self.linesCleared = saved.linesCleared
             self.isDead = false
-            self.isPaused = true // Open paused so user has time to orient
-            self.rotationDeg = Double(saved.currentRotation) * (.pi / 2)
-            self.rotationDegGoal = self.rotationDeg
+            self.isPaused = true // Open paused so player is ready
         } else {
             startNewGame()
         }
@@ -77,6 +66,7 @@ final class GameEngine: ObservableObject {
         linesCleared = 0
         isDead = false
         isPaused = false
+        isSoftDropping = false
         lineClearOffset = 0
         lineClearBreakRow = nil
         lineClearYV = 0
@@ -91,28 +81,23 @@ final class GameEngine: ObservableObject {
     private func spawnPiece(shapeIndex: Int) {
         guard let pieceType = TetrominoType(rawValue: shapeIndex) else { return }
         currentShapeIndex = shapeIndex
-        currentShape = pieceType.matrix
         currentRotation = 0
-        rotationDeg = 0
-        rotationDegGoal = 0
+        currentShape = pieceType.allRotationStates[0]
 
-        // Spawn centered at the top
+        // Spawn centered horizontally on the grid
         let shapeWidth = currentShape[0].count
-        let startCol = (GameConfig.columns - shapeWidth) / 2
-        currentX = Double(startCol) * GameConfig.cellSize
-        // Spawn just above the red line
-        currentY = Double(GameConfig.deathLimitRow - shapeHeight) * GameConfig.cellSize
-        if currentY < 0 {
-            currentY = 0
-        }
+        gridX = (GameConfig.columns - shapeWidth) / 2
+        // Spawn above red line
+        currentY = 1.0
 
-        velX = 0
-        velY = GameConfig.verticalSpeed
+        // If spawn position immediately collides, game over
+        if !isValidPosition(shape: currentShape, atX: gridX, atY: currentY) {
+            die()
+        }
     }
 
     func startLoop() {
         timer?.invalidate()
-        // 60 FPS tick loop
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
@@ -127,42 +112,6 @@ final class GameEngine: ObservableObject {
     func tick() {
         guard !isPaused && !isDead else { return }
 
-        handleInput()
-
-        // Smooth rotation easing
-        rotationDeg = easeTo(rotationDegGoal, rotationDeg, speed: 0.3, threshold: 0.01)
-
-        // Vertical movement
-        let prevYY = Int(round(currentY / GameConfig.cellSize))
-        currentY += velY
-
-        if isCollision() {
-            // Revert movement and snap to grid
-            currentY -= velY
-            currentY = Double(Int(round(currentY / GameConfig.cellSize))) * GameConfig.cellSize
-            mergeCurrentPiece()
-            score += 10
-        } else {
-            // Fast fall score bonus
-            if isDownPressed && velY > GameConfig.verticalSpeed {
-                let newYY = Int(round(currentY / GameConfig.cellSize))
-                if newYY > prevYY {
-                    score += (newYY - prevYY)
-                }
-            }
-        }
-
-        // Horizontal movement
-        currentX += velX
-        if isCollision() {
-            currentX -= velX
-        }
-
-        // Keep within board horizontal boundaries
-        let minX = -Double(whitespaceLeft) * GameConfig.cellSize
-        let maxX = GameConfig.gameWidth - Double(shapeWidth - whitespaceRight) * GameConfig.cellSize
-        currentX = min(max(currentX, minX), maxX)
-
         // Line clear smooth collapse
         if lineClearOffset < 0 {
             lineClearOffset = min(0, lineClearOffset + lineClearYV)
@@ -172,24 +121,87 @@ final class GameEngine: ObservableObject {
             }
         }
 
-        if rotateTimer > 0 {
-            rotateTimer -= 1
+        // Determine fall speed
+        let speed = isSoftDropping ? GameConfig.softDropSpeed : GameConfig.normalFallSpeed
+        let nextY = currentY + speed
+
+        if isValidPosition(shape: currentShape, atX: gridX, atY: nextY) {
+            if isSoftDropping {
+                let oldRow = Int(floor(currentY))
+                let newRow = Int(floor(nextY))
+                if newRow > oldRow {
+                    score += 1
+                }
+            }
+            currentY = nextY
+        } else {
+            // Reached ground / resting position
+            currentY = Double(Int(floor(currentY)))
+            mergeCurrentPiece()
+            score += 10
         }
     }
 
-    // MARK: - Input Handling
-    func setLeftPressed(_ pressed: Bool) {
-        isLeftPressed = pressed
+    // MARK: - Discrete Grid Movement
+    func moveLeft() {
+        guard !isDead && !isPaused else { return }
+        if isValidPosition(shape: currentShape, atX: gridX - 1, atY: currentY) {
+            gridX -= 1
+        }
     }
 
-    func setRightPressed(_ pressed: Bool) {
-        isRightPressed = pressed
+    func moveRight() {
+        guard !isDead && !isPaused else { return }
+        if isValidPosition(shape: currentShape, atX: gridX + 1, atY: currentY) {
+            gridX += 1
+        }
     }
 
-    func setDownPressed(_ pressed: Bool) {
-        isDownPressed = pressed
+    func setSoftDropping(_ active: Bool) {
+        isSoftDropping = active
     }
 
+    func hardDrop() {
+        guard !isDead && !isPaused else { return }
+
+        var targetY = currentY
+        while isValidPosition(shape: currentShape, atX: gridX, atY: targetY + 1.0) {
+            targetY += 1.0
+        }
+
+        let droppedRows = Int(floor(targetY)) - Int(floor(currentY))
+        if droppedRows > 0 {
+            score += droppedRows * 2
+        }
+
+        currentY = Double(Int(floor(targetY)))
+        mergeCurrentPiece()
+        score += 10
+    }
+
+    // MARK: - Linear, Wall-Kicked Rotation
+    func rotate(dir: Int = 1) {
+        guard !isDead && !isPaused else { return }
+        guard let piece = TetrominoType(rawValue: currentShapeIndex) else { return }
+
+        let nextRot = (currentRotation + dir + 4) % 4
+        let testShape = piece.allRotationStates[nextRot]
+
+        // Wall kicks: in-place (0), kick right 1 (+1), kick left 1 (-1), kick right 2 (+2), kick left 2 (-2)
+        let kicks = [0, 1, -1, 2, -2, 3, -3]
+
+        for offset in kicks {
+            let testX = gridX + offset
+            if isValidPosition(shape: testShape, atX: testX, atY: currentY) {
+                gridX = testX
+                currentRotation = nextRot
+                currentShape = testShape
+                return
+            }
+        }
+    }
+
+    // MARK: - Pause Controls
     func togglePause() {
         guard !isDead else { return }
         isPaused.toggle()
@@ -198,146 +210,72 @@ final class GameEngine: ObservableObject {
         }
     }
 
-    func rotate(dir: Int = 1) {
-        guard rotateTimer <= 0, !isPaused, !isDead else { return }
-
-        var newShape = currentShape
-        rotateMatrix(&newShape, dir: dir)
-
-        let prevShape = currentShape
-        let prevX = currentX
-        currentShape = newShape
-
-        // Wall kick test (Stacker algorithm)
-        var offset = 1.0
-        let maxOffset = Double(newShape[0].count)
-
-        while isCollision() {
-            currentX += offset * GameConfig.cellSize
-            offset = -(offset + (offset > 0 ? 1 : -1))
-
-            if abs(offset) > maxOffset {
-                // Revert
-                currentX = prevX
-                currentShape = prevShape
-                return
-            }
+    func autoPause() {
+        if !isDead && !isPaused {
+            isPaused = true
+            saveCurrentState()
         }
-
-        currentRotation = (currentRotation + dir + 4) % 4
-        rotationDegGoal += Double(dir) * (.pi / 2)
-        rotateTimer = GameConfig.rotateDelay
     }
 
-    private func handleInput() {
-        // Vertical speed
-        velY = isDownPressed ? (GameConfig.verticalSpeed + GameConfig.boostSpeed) : GameConfig.verticalSpeed
+    // MARK: - Ghost Piece Projection
+    var ghostY: Double {
+        var testY = currentY
+        while isValidPosition(shape: currentShape, atX: gridX, atY: testY + 1.0) {
+            testY += 1.0
+        }
+        return Double(Int(floor(testY)))
+    }
 
-        // Horizontal movement
-        if isLeftPressed || isRightPressed {
-            let dir: Double = isLeftPressed ? -1.0 : 1.0
-            var allow = true
+    // MARK: - Strict Boundary & Collision Checking
+    func isValidPosition(shape: [[Int]], atX testX: Int, atY testY: Double) -> Bool {
+        let checkRow = Int(ceil(testY))
 
-            // Prevent sliding into settled blocks
-            for y in 0..<currentShape.count {
-                for x in 0..<currentShape[y].count {
-                    if currentShape[y][x] != 0 {
-                        let by = yy + y
-                        let bx = xx + x + Int(dir)
-                        if by >= 0 && by < GameConfig.rows && bx >= 0 && bx < GameConfig.columns {
-                            if arena[by][bx] != 0 {
-                                allow = false
-                            }
-                        }
+        for r in 0..<shape.count {
+            for c in 0..<shape[r].count {
+                if shape[r][c] != 0 {
+                    let col = testX + c
+                    let row = checkRow + r
+
+                    // STRICT HORIZONTAL BOUNDARIES: 0 <= col < 10
+                    if col < 0 || col >= GameConfig.columns {
+                        return false
                     }
-                }
-            }
 
-            if allow {
-                velX = GameConfig.horizontalSpeed * dir
-            } else {
-                slideToTile()
-            }
-        } else {
-            slideToTile()
-        }
-    }
-
-    private func slideToTile() {
-        let goalX = Double(xx) * GameConfig.cellSize
-        velX = easeTo(goalX, currentX, speed: 0.2, threshold: 0.01) - currentX
-    }
-
-    // MARK: - Collision Detection
-    var xx: Int {
-        Int(round(currentX / GameConfig.cellSize))
-    }
-
-    var yy: Int {
-        Int(round(currentY / GameConfig.cellSize))
-    }
-
-    var yyc: Int {
-        Int(ceil(currentY / GameConfig.cellSize))
-    }
-
-    private func isCollision() -> Bool {
-        // Bottom boundary
-        let bottomY = currentY + Double(shapeHeight + whitespaceTop) * GameConfig.cellSize
-        if bottomY > GameConfig.gameHeight {
-            return true
-        }
-
-        // Left boundary
-        if currentX + Double(whitespaceLeft) * GameConfig.cellSize < 0 {
-            return true
-        }
-
-        // Right boundary
-        if currentX + Double(shapeWidth - whitespaceRight) * GameConfig.cellSize > GameConfig.gameWidth {
-            return true
-        }
-
-        // Arena block collisions
-        for y in 0..<currentShape.count {
-            for x in 0..<currentShape[y].count {
-                if currentShape[y][x] != 0 {
-                    let boardY = yyc + y
-                    let boardX = xx + x
-
-                    if boardY >= GameConfig.rows {
-                        return true
+                    // STRICT BOTTOM BOUNDARY: row < 18
+                    if row >= GameConfig.rows {
+                        return false
                     }
-                    if boardX < 0 || boardX >= GameConfig.columns {
-                        return true
-                    }
-                    if boardY >= 0 && arena[boardY][boardX] != 0 {
-                        return true
+
+                    // ARENA BLOCK COLLISION
+                    if row >= 0 && arena[row][col] != 0 {
+                        return false
                     }
                 }
             }
         }
-        return false
+        return true
     }
 
     // MARK: - Merging & Line Clearing
     private func mergeCurrentPiece() {
         guard let pieceType = TetrominoType(rawValue: currentShapeIndex) else { return }
         let colorIdx = pieceType.colorIndex
+        let landingRow = Int(floor(currentY))
 
-        for y in 0..<currentShape.count {
-            for x in 0..<currentShape[y].count {
-                if currentShape[y][x] != 0 {
-                    let boardY = yy + y
-                    let boardX = xx + x
-                    if boardY >= 0 && boardY < GameConfig.rows && boardX >= 0 && boardX < GameConfig.columns {
-                        arena[boardY][boardX] = colorIdx
+        for r in 0..<currentShape.count {
+            for c in 0..<currentShape[r].count {
+                if currentShape[r][c] != 0 {
+                    let boardRow = landingRow + r
+                    let boardCol = gridX + c
+
+                    if boardRow >= 0 && boardRow < GameConfig.rows && boardCol >= 0 && boardCol < GameConfig.columns {
+                        arena[boardRow][boardCol] = colorIdx
                     }
                 }
             }
         }
 
-        // Check death condition: any block in rows 0..<4
+        // Check death condition: any settled block in rows 0..<4
         var hitCeiling = false
         for r in 0..<GameConfig.deathLimitRow {
             if arena[r].contains(where: { $0 > 0 }) {
@@ -351,7 +289,7 @@ final class GameEngine: ObservableObject {
             return
         }
 
-        // Clear completed lines using Stacker's exact scoring algorithm
+        // Clear completed lines using Stacker's exact formula
         var cleared = 0
         var lineClearScore = 0.0
 
@@ -365,13 +303,13 @@ final class GameEngine: ObservableObject {
                 cleared += 1
                 linesCleared += 1
 
-                // Visual break effect
+                // Visual collapse effect
                 lineClearOffset -= GameConfig.cellSize
                 lineClearBreakRow = r + 1
                 if lineClearYV == 0 {
-                    lineClearYV += 4.0 * (GameConfig.cellSize / 60.0)
+                    lineClearYV += 2.0
                 } else {
-                    lineClearYV += 1.5 * (GameConfig.cellSize / 60.0)
+                    lineClearYV += 1.0
                 }
             }
         }
@@ -399,11 +337,10 @@ final class GameEngine: ObservableObject {
         guard !isDead else { return }
         let state = SavedGameState(
             arenaMatrix: arena,
-            currentX: currentX,
+            gridX: gridX,
             currentY: currentY,
             currentShapeIndex: currentShapeIndex,
             currentRotation: currentRotation,
-            currentShape: currentShape,
             nextShapeIndex: nextShapeIndex,
             bag: bag.getRemainingBag(),
             score: score,
@@ -415,7 +352,7 @@ final class GameEngine: ObservableObject {
         StateManager.shared.saveState(state)
     }
 
-    // MARK: - Helper calculations
+    // MARK: - Colors & Helpers
     var currentColor: Color {
         TetrominoType(rawValue: currentShapeIndex)?.color ?? .white
     }
@@ -425,102 +362,6 @@ final class GameEngine: ObservableObject {
     }
 
     var nextShapeMatrix: [[Int]] {
-        TetrominoType(rawValue: nextShapeIndex)?.matrix ?? []
-    }
-
-    var shapeWidth: Int {
-        currentShape.first?.count ?? 0
-    }
-
-    var shapeHeight: Int {
-        var h = currentShape.count
-        for row in currentShape {
-            if row.allSatisfy({ $0 == 0 }) {
-                h -= 1
-            }
-        }
-        return h
-    }
-
-    var whitespaceTop: Int {
-        var count = 0
-        for row in currentShape {
-            if row.allSatisfy({ $0 == 0 }) {
-                count += 1
-            } else {
-                break
-            }
-        }
-        return count
-    }
-
-    var whitespaceLeft: Int {
-        guard !currentShape.isEmpty else { return 0 }
-        var blanks = 0
-        for x in 0..<currentShape[0].count {
-            var colEmpty = true
-            for y in 0..<currentShape.count {
-                if currentShape[y][x] != 0 {
-                    colEmpty = false
-                    break
-                }
-            }
-            if colEmpty {
-                blanks += 1
-            } else {
-                break
-            }
-        }
-        return blanks
-    }
-
-    var whitespaceRight: Int {
-        guard !currentShape.isEmpty else { return 0 }
-        var blanks = 0
-        for x in stride(from: currentShape[0].count - 1, through: 0, by: -1) {
-            var colEmpty = true
-            for y in 0..<currentShape.count {
-                if currentShape[y][x] != 0 {
-                    colEmpty = false
-                    break
-                }
-            }
-            if colEmpty {
-                blanks += 1
-            } else {
-                break
-            }
-        }
-        return blanks
+        TetrominoType(rawValue: nextShapeIndex)?.defaultMatrix ?? []
     }
 }
-
-// Matrix rotation utility
-func rotateMatrix(_ matrix: inout [[Int]], dir: Int) {
-    let n = matrix.count
-    // Transpose
-    for y in 0..<n {
-        for x in 0..<y {
-            let temp = matrix[x][y]
-            matrix[x][y] = matrix[y][x]
-            matrix[y][x] = temp
-        }
-    }
-    // Clockwise (dir = 1): reverse each row
-    // Counter-clockwise (dir = -1): reverse array of rows
-    if dir == 1 {
-        for i in 0..<matrix.count {
-            matrix[i].reverse()
-        }
-    } else {
-        matrix.reverse()
-    }
-}
-
-func easeTo(_ goal: Double, _ value: Double, speed: Double, threshold: Double) -> Double {
-    if abs(goal - value) <= threshold {
-        return goal
-    }
-    return value + (goal - value) * speed
-}
-

@@ -13,7 +13,25 @@ struct GameView: View {
             Canvas { context, size in
                 let cell = GameConfig.cellSize
 
-                // 1. Draw Settled Arena Blocks
+                // 1. Draw Subtle Grid Pattern (obviously shaped like a grid)
+                for r in GameConfig.deathLimitRow..<GameConfig.rows {
+                    for c in 0..<GameConfig.columns {
+                        let rect = CGRect(
+                            x: Double(c) * cell,
+                            y: Double(r) * cell,
+                            width: cell,
+                            height: cell
+                        )
+                        // Faint border for each cell
+                        context.stroke(
+                            Path(rect),
+                            with: .color(Color.white.opacity(0.04)),
+                            lineWidth: 0.5
+                        )
+                    }
+                }
+
+                // 2. Draw Settled Arena Blocks
                 for y in 0..<GameConfig.rows {
                     for x in 0..<GameConfig.columns {
                         let val = engine.arena[y][x]
@@ -24,10 +42,10 @@ struct GameView: View {
                             }
 
                             let rect = CGRect(
-                                x: Double(x) * cell,
-                                y: Double(y) * cell + yOffset,
-                                width: cell,
-                                height: cell
+                                x: Double(x) * cell + 0.5,
+                                y: Double(y) * cell + yOffset + 0.5,
+                                width: cell - 1.0,
+                                height: cell - 1.0
                             )
 
                             context.fill(
@@ -38,28 +56,42 @@ struct GameView: View {
                     }
                 }
 
-                // 2. Draw Active Falling Tetromino (with smooth rotation & translation)
+                // 3. Draw Ghost Piece (Faint Landing Projection)
+                if !engine.isDead && !engine.isPaused {
+                    let shape = engine.currentShape
+                    let ghostY = engine.ghostY
+                    for r in 0..<shape.count {
+                        for c in 0..<shape[r].count {
+                            if shape[r][c] != 0 {
+                                let rect = CGRect(
+                                    x: Double(engine.gridX + c) * cell + 0.5,
+                                    y: (ghostY + Double(r)) * cell + 0.5,
+                                    width: cell - 1.0,
+                                    height: cell - 1.0
+                                )
+                                context.stroke(
+                                    Path(rect),
+                                    with: .color(engine.currentColor.opacity(0.35)),
+                                    lineWidth: 1.0
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 4. Draw Active Falling Tetromino (Strict Grid-Aligned)
                 if !engine.isDead {
                     let shape = engine.currentShape
-                    let n = shape.count
-                    let halfSize = (Double(n) * cell) / 2.0
-                    let centerX = engine.currentX + halfSize
-                    let centerY = engine.currentY + halfSize
-
-                    var pieceContext = context
-                    pieceContext.translateBy(x: centerX, y: centerY)
-                    pieceContext.rotate(by: Angle(radians: engine.rotationDeg))
-
-                    for y in 0..<shape.count {
-                        for x in 0..<shape[y].count {
-                            if shape[y][x] != 0 {
+                    for r in 0..<shape.count {
+                        for c in 0..<shape[r].count {
+                            if shape[r][c] != 0 {
                                 let rect = CGRect(
-                                    x: Double(x) * cell - halfSize,
-                                    y: Double(y) * cell - halfSize,
-                                    width: cell,
-                                    height: cell
+                                    x: Double(engine.gridX + c) * cell + 0.5,
+                                    y: (engine.currentY + Double(r)) * cell + 0.5,
+                                    width: cell - 1.0,
+                                    height: cell - 1.0
                                 )
-                                pieceContext.fill(
+                                context.fill(
                                     Path(rect),
                                     with: .color(engine.currentColor)
                                 )
@@ -70,13 +102,13 @@ struct GameView: View {
             }
             .frame(width: GameConfig.gameWidth, height: GameConfig.gameHeight)
 
-            // Red Ceiling Line at row 4
+            // Red Ceiling Line at Row 4
             Rectangle()
                 .fill(Color.red)
                 .frame(width: GameConfig.gameWidth, height: 1.5)
                 .offset(y: GameConfig.redLineY)
 
-            // High Score Text centered directly below red line (matches screenshot)
+            // High Score Text centered directly below red line
             Button(action: {
                 engine.showHistory = true
             }) {
@@ -133,7 +165,7 @@ struct GameView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .help("Pause / Resume (Space)")
+                    .help("Pause / Resume (P)")
                 }
                 .padding(.horizontal, 14)
                 .padding(.top, 12)
@@ -209,7 +241,7 @@ struct GameView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.white.opacity(0.3), lineWidth: 1)
                     )
-                    Text("Press Space to Resume")
+                    Text("Press P or click Play to Resume")
                         .font(.system(size: 12))
                         .foregroundColor(.gray)
                         .padding(.top, 6)
@@ -221,7 +253,7 @@ struct GameView: View {
                 }
             }
 
-            // Minimal Footer (Matches Stacker style)
+            // Minimal Footer
             VStack {
                 Spacer()
                 HStack {
@@ -236,7 +268,7 @@ struct GameView: View {
 
                     Spacer()
 
-                    Text("Space: Pause")
+                    Text("Space: Drop • P: Pause")
                         .font(.system(size: 10))
                         .foregroundColor(.gray.opacity(0.7))
 

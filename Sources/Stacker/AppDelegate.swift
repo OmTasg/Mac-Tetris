@@ -6,12 +6,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: FloatingGamePanel!
     private let engine = GameEngine()
     private var keyMonitor: Any?
+    private var globalClickMonitor: Any?
     private var isUserRepositioned = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         setupPanel()
         setupKeyMonitor()
+        setupAutoPauseObservers()
 
         // Automatically show the popup on initial launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -24,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidResignActive(_ notification: Notification) {
-        engine.saveCurrentState()
+        engine.autoPause()
     }
 
     // MARK: - Menu Bar Setup
@@ -57,7 +59,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit Stacker", action: #selector(quitApp), keyEquivalent: "q"))
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
-        // Reset menu back to nil so left clicks work normally
         DispatchQueue.main.async {
             self.statusItem.menu = nil
         }
@@ -87,13 +88,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hostingView.frame = rect
         panel.contentView = hostingView
 
-        // Notification when user moves the panel
         NotificationCenter.default.addObserver(
             forName: NSWindow.didMoveNotification,
             object: panel,
             queue: .main
         ) { [weak self] _ in
             self?.isUserRepositioned = true
+        }
+
+        // Auto pause on window resign key (clicking outside)
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self] _ in
+            self?.engine.autoPause()
+        }
+    }
+
+    // Auto-pause when user clicks outside anywhere on screen
+    private func setupAutoPauseObservers() {
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            guard let self = self, self.panel.isVisible else { return }
+            let mouseLocation = NSEvent.mouseLocation
+            if !self.panel.frame.contains(mouseLocation) {
+                DispatchQueue.main.async {
+                    self.engine.autoPause()
+                }
+            }
         }
     }
 
@@ -114,7 +136,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             var x = buttonFrame.midX - (panelWidth / 2)
             let y = buttonFrame.minY - panelHeight - 6
 
-            // Keep within screen edges
             x = max(screen.visibleFrame.minX + 8, min(x, screen.visibleFrame.maxX - panelWidth - 8))
             panel.setFrameOrigin(NSPoint(x: x, y: y))
         }
@@ -124,10 +145,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func hidePanel() {
-        if !engine.isDead && !engine.isPaused {
-            engine.togglePause()
-        }
-        engine.saveCurrentState()
+        engine.autoPause()
         panel.orderOut(nil)
     }
 
@@ -139,19 +157,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let isDown = event.type == .keyDown
 
             switch event.keyCode {
-            // Left Arrow (123) / 'A' (0)
+            // Left Arrow (123) / 'A' (0): Discrete grid step left
             case 123, 0:
-                self.engine.setLeftPressed(isDown)
+                if isDown {
+                    self.engine.moveLeft()
+                }
                 return nil
 
-            // Right Arrow (124) / 'D' (2)
+            // Right Arrow (124) / 'D' (2): Discrete grid step right
             case 124, 2:
-                self.engine.setRightPressed(isDown)
+                if isDown {
+                    self.engine.moveRight()
+                }
                 return nil
 
-            // Down Arrow (125) / 'S' (1)
+            // Down Arrow (125) / 'S' (1): Soft Drop
             case 125, 1:
-                self.engine.setDownPressed(isDown)
+                self.engine.setSoftDropping(isDown)
                 return nil
 
             // Up Arrow (126) / 'W' (13) / 'E' (14): Rotate Clockwise
@@ -168,8 +190,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 return nil
 
-            // Spacebar (49): Toggle Pause
+            // Spacebar (49): Hard Drop automatically to the bottom
             case 49:
+                if isDown {
+                    self.engine.hardDrop()
+                }
+                return nil
+
+            // 'P' (35): Toggle Pause
+            case 35:
                 if isDown {
                     self.engine.togglePause()
                 }
@@ -203,11 +232,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Tetris Menu Bar Icon Drawing
     private func createTetrisMenuBarIcon() -> NSImage {
         let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size, flipped: false) { rect in
+        let image = NSImage(size: size, flipped: false) { _ in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
 
-            // Draw a stylish 4-block T-piece icon
-            // Top row: 3 blocks, bottom center: 1 block
             let blockSize: CGFloat = 4.5
             let spacing: CGFloat = 1.0
             let startX: CGFloat = (size.width - (blockSize * 3 + spacing * 2)) / 2
@@ -232,8 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return true
         }
 
-        image.isTemplate = true // Seamlessly adapts to macOS light & dark menu bars
+        image.isTemplate = true
         return image
     }
 }
-
