@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GameView: View {
     @ObservedObject var engine: GameEngine
+    @ObservedObject private var windowManager = WindowManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -220,7 +221,7 @@ struct GameView: View {
 
             // Minimal Footer (Below canvas, never overlapping Row 17)
             HStack {
-                HStack(spacing: 7) {
+                HStack(spacing: 8) {
                     Button(action: {
                         engine.activeModalTab = .leaderboard
                         engine.showHistory = true
@@ -240,16 +241,6 @@ struct GameView: View {
                             .foregroundColor(.gray)
                     }
                     .buttonStyle(.plain)
-
-                    Button(action: {
-                        engine.activeModalTab = .style
-                        engine.showHistory = true
-                    }) {
-                        Text("🎨 Style")
-                            .font(.system(size: 10))
-                            .foregroundColor(.gray)
-                    }
-                    .buttonStyle(.plain)
                 }
 
                 Spacer()
@@ -264,20 +255,37 @@ struct GameView: View {
 
                 Spacer()
 
-                Button(action: {
-                    AppDelegate.shared?.hidePanel()
-                }) {
-                    HStack(spacing: 3) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 5, height: 5)
-                        Text("On Top")
-                            .font(.system(size: 10))
-                            .foregroundColor(.gray)
+                HStack(spacing: 8) {
+                    // Instant 1-click Transparency Pill (cycles 100% -> 85% -> 70% -> 50% -> 100%)
+                    Button(action: {
+                        windowManager.cyclePreset()
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "circle.lefthalf.filled")
+                                .font(.system(size: 8))
+                            Text(windowManager.formattedOpacity)
+                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        }
+                        .foregroundColor(windowManager.paneOpacity < 0.99 ? .cyan : .gray)
                     }
+                    .buttonStyle(.plain)
+                    .help("Click to cycle opacity: 100% → 85% → 70% → 50% (or press [ and ])")
+
+                    Button(action: {
+                        AppDelegate.shared?.hidePanel()
+                    }) {
+                        HStack(spacing: 3) {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 5, height: 5)
+                            Text("On Top")
+                                .font(.system(size: 10))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .help("Click to Hide (Esc or ⌘W)")
                 }
-                .buttonStyle(.plain)
-                .help("Click to Hide (Esc or ⌘W)")
             }
             .padding(.horizontal, 12)
             .frame(width: GameConfig.gameWidth, height: GameConfig.footerHeight)

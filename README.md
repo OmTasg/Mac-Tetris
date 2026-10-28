@@ -55,18 +55,12 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
       - **Piece Radar**: 7-bag tetromino placement distribution and favorite/most dropped piece.
   - Active time tracking **strictly counts active gameplay only** (freezes while paused, dead, or backgrounded).
 
-- **Customizable Themes & Window Transparency Slider**:
-  - Accessible via **"🎨 Style"** in the footer or the **Style** tab inside the popup sheet:
-    - **Pane Transparency Slider**: Adjust window opacity from 30% to 100% with live feedback and quick presets (`Solid`, `85%`, `70%`, `50%`), letting you see your wallpaper, browser, or code editor underneath the game.
-    - **7 Handcrafted Color Themes**: One-click instant palette swapping:
-      - ⚡️ *Neon Cyberpunk* (Default authentic Stacker neon)
-      - 🕹️ *Retro Arcade* (Classic 80s NES arcade palette)
-      - 🌿 *Nordic Pastel* (Soft matte pastels)
-      - 👾 *Game Boy 1989* (Nostalgic 4-shade greenish LCD)
-      - ⚪️ *Monochrome Minimal* (Clean Apple grayscale)
-      - 🔮 *Synthwave / Dracula* (Midnight purple & electric glow)
-      - 🌅 *Sunset Horizon* (Warm dusk amber, coral & violet)
-    - Preferences are saved automatically and remembered across launches.
+- **Instant 1-Click Window Transparency**:
+  - Direct footer pill (`👁 100%`) lets you cycle window opacity in a single click (`100%` → `85%` → `70%` → `50%` → `100%`).
+  - Shortcut keys `[` / `-` and `]` / `+` let you fine-tune opacity on the fly in 5% increments without lifting your fingers from the keyboard.
+  - Allows you to see through the window to your code editor, terminal, or wallpaper.
+  - Settings are saved automatically to `UserDefaults` and persist across launches.
+  - Authentic, clean Stacker flat neon solid colors on pitch black arena.
 
 ---
 
@@ -82,6 +76,8 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
 | **Rotate Clockwise** | `Up Arrow` | `W` or `E` |
 | **Rotate Counter-Clockwise** | `Q` | — |
 | **Pause / Resume** | `P` | Click `❚❚` / `▶` |
+| **Opacity Down (See-through)** | `[` | `-` (Fine-tune by 5%) |
+| **Opacity Up (Solid)** | `]` | `+` / `=` (Fine-tune by 5%) |
 | **Close / Hide Popup** | `Escape` (Global) / `⌘W` | Click `✕` button on header or click Menu Bar icon |
 | **Quit App** | `⌘Q` | Right-click Menu Bar icon → Quit |
 

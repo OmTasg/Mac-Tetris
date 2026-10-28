@@ -92,7 +92,7 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
         let rect = NSRect(x: 0, y: 0, width: width, height: height)
 
         panel = FloatingGamePanel(contentRect: rect)
-        panel.alphaValue = CGFloat(ThemeManager.shared.paneOpacity)
+        panel.alphaValue = CGFloat(WindowManager.shared.paneOpacity)
 
         let hostingView = ClickableHostingView(rootView: GameView(engine: engine))
         hostingView.frame = rect
@@ -274,6 +274,20 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
             case 53:
                 if isDown {
                     self.hidePanel()
+                }
+                return nil
+
+            // '[' (33) / '-' (27): Quick transparency adjustment down (more see-through)
+            case 33, 27:
+                if isDown {
+                    WindowManager.shared.adjust(by: -0.05)
+                }
+                return nil
+
+            // ']' (30) / '=' (24): Quick transparency adjustment up (more solid)
+            case 30, 24:
+                if isDown {
+                    WindowManager.shared.adjust(by: 0.05)
                 }
                 return nil
 

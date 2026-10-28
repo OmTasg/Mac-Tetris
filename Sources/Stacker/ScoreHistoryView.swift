@@ -18,7 +18,6 @@ struct ScoreHistoryView: View {
                 HStack(spacing: 3) {
                     tabButton(title: "Scores", icon: "trophy.fill", tab: .leaderboard)
                     tabButton(title: "Stats", icon: "chart.bar.xaxis", tab: .analytics)
-                    tabButton(title: "Style", icon: "paintpalette.fill", tab: .style)
 
                     Spacer()
 
@@ -43,8 +42,6 @@ struct ScoreHistoryView: View {
                     leaderboardContent
                 case .analytics:
                     AnalyticsDashboardView(analytics: history.analytics, engine: engine)
-                case .style:
-                    StyleSettingsView()
                 }
 
                 Divider()
@@ -684,149 +681,5 @@ struct AnalyticsMetricTile: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.white.opacity(0.06))
         )
-    }
-}
-
-// MARK: - Style & Settings View
-struct StyleSettingsView: View {
-    @ObservedObject private var themeManager = ThemeManager.shared
-
-    var body: some View {
-        ScrollView(showsIndicators: true) {
-            VStack(spacing: 12) {
-                // 1. Transparency Slider Section
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 11))
-                            .foregroundColor(.cyan)
-                        Text("PANE TRANSPARENCY")
-                            .font(.system(size: 9.5, weight: .bold))
-                            .foregroundColor(.gray)
-                        Spacer()
-                        Text("\(Int(round(themeManager.paneOpacity * 100)))%")
-                            .font(.system(size: 12, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
-                    }
-
-                    // Native macOS Slider
-                    Slider(
-                        value: $themeManager.paneOpacity,
-                        in: 0.30...1.0,
-                        step: 0.05
-                    )
-                    .accentColor(.yellow)
-
-                    // Quick presets
-                    HStack(spacing: 5) {
-                        presetButton("Solid", value: 1.0)
-                        presetButton("85%", value: 0.85)
-                        presetButton("70%", value: 0.70)
-                        presetButton("50%", value: 0.50)
-                    }
-
-                    Text("Slide left to see through the window to your wallpaper or code.")
-                        .font(.system(size: 8.5))
-                        .foregroundColor(.gray.opacity(0.8))
-                }
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.white.opacity(0.06))
-                )
-
-                // 2. Themes Section
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Image(systemName: "paintpalette.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.yellow)
-                        Text("COLOR THEMES")
-                            .font(.system(size: 9.5, weight: .bold))
-                            .foregroundColor(.gray)
-                    }
-
-                    VStack(spacing: 5) {
-                        ForEach(GameTheme.allCases) { theme in
-                            let isSelected = themeManager.currentTheme == theme
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    themeManager.currentTheme = theme
-                                }
-                            }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: theme.icon)
-                                        .font(.system(size: 12))
-                                        .foregroundColor(isSelected ? .yellow : .gray)
-                                        .frame(width: 16)
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        HStack(spacing: 5) {
-                                            Text(theme.rawValue)
-                                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                                                .foregroundColor(isSelected ? .white : .white.opacity(0.85))
-
-                                            if isSelected {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .font(.system(size: 9))
-                                                    .foregroundColor(.yellow)
-                                            }
-                                        }
-
-                                        Text(theme.subtitle)
-                                            .font(.system(size: 8.5))
-                                            .foregroundColor(.gray)
-                                            .lineLimit(1)
-
-                                        // Palette swatch: 7 mini colored blocks
-                                        HStack(spacing: 2.5) {
-                                            ForEach(0..<theme.paletteHex.count, id: \.self) { i in
-                                                RoundedRectangle(cornerRadius: 1.5)
-                                                    .fill(Color(hex: theme.paletteHex[i]))
-                                                    .frame(width: 11, height: 6)
-                                            }
-                                        }
-                                        .padding(.top, 1)
-                                    }
-
-                                    Spacer()
-                                }
-                                .padding(7)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 7)
-                                        .fill(isSelected ? Color.white.opacity(0.12) : Color.white.opacity(0.04))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 7)
-                                                .stroke(isSelected ? Color.yellow.opacity(0.4) : Color.clear, lineWidth: 1)
-                                        )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-        }
-        .frame(maxHeight: 320)
-    }
-
-    private func presetButton(_ title: String, value: Double) -> some View {
-        Button(action: {
-            themeManager.paneOpacity = value
-        }) {
-            Text(title)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundColor(abs(themeManager.paneOpacity - value) < 0.02 ? .black : .white.opacity(0.85))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(abs(themeManager.paneOpacity - value) < 0.02 ? Color.yellow : Color.white.opacity(0.1))
-                )
-        }
-        .buttonStyle(.plain)
     }
 }

@@ -5,7 +5,6 @@ import Combine
 enum ModalSheetTab: String, CaseIterable {
     case leaderboard = "Leaderboard"
     case analytics = "Analytics"
-    case style = "Style"
 }
 
 final class GameEngine: ObservableObject {
@@ -511,11 +510,11 @@ final class GameEngine: ObservableObject {
 
     // MARK: - Colors & Helpers
     var currentColor: Color {
-        ThemeManager.shared.color(forPieceIndex: currentShapeIndex)
+        TetrominoType(rawValue: currentShapeIndex)?.color ?? .white
     }
 
     var nextColor: Color {
-        ThemeManager.shared.color(forPieceIndex: nextShapeIndex)
+        TetrominoType(rawValue: nextShapeIndex)?.color ?? .white
     }
 
     var nextShapeMatrix: [[Int]] {
