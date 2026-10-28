@@ -69,7 +69,8 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
 | **Rotate Clockwise** | `Up Arrow` | `W` or `E` |
 | **Rotate Counter-Clockwise** | `Q` | — |
 | **Pause / Resume** | `P` | Click `❚❚` / `▶` |
-| **Close / Hide Popup** | `Escape` | Click Menu Bar icon |
+| **Close / Hide Popup** | `Escape` (Global) / `⌘W` | Click `✕` button on header or click Menu Bar icon |
+| **Quit App** | `⌘Q` | Right-click Menu Bar icon → Quit |
 
 ---
 

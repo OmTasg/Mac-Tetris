@@ -89,21 +89,39 @@ struct GameView: View {
 
                         Spacer()
 
-                        // Pause Button (❚❚ / ▶) on the top-right
-                        Button(action: {
-                            engine.togglePause()
-                        }) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(width: 36, height: 36)
-                                Image(systemName: engine.isPaused ? "play.fill" : "pause.fill")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
+                        HStack(spacing: 6) {
+                            // Pause Button (❚❚ / ▶) on the top-right
+                            Button(action: {
+                                engine.togglePause()
+                            }) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.18))
+                                        .frame(width: 32, height: 32)
+                                    Image(systemName: engine.isPaused ? "play.fill" : "pause.fill")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
                             }
+                            .buttonStyle(.plain)
+                            .help("Pause / Resume (P or Space)")
+
+                            // Close Button (✕)
+                            Button(action: {
+                                AppDelegate.shared?.hidePanel()
+                            }) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.white.opacity(0.18))
+                                        .frame(width: 32, height: 32)
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .help("Close Window (Esc or ⌘W)")
                         }
-                        .buttonStyle(.plain)
-                        .help("Pause / Resume (P or Space)")
                     }
                     .padding(.horizontal, 14)
                     .padding(.top, 10)
@@ -230,14 +248,20 @@ struct GameView: View {
 
                 Spacer()
 
-                HStack(spacing: 3) {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 5, height: 5)
-                    Text("On Top")
-                        .font(.system(size: 10))
-                        .foregroundColor(.gray)
+                Button(action: {
+                    AppDelegate.shared?.hidePanel()
+                }) {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 5, height: 5)
+                        Text("On Top")
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                    }
                 }
+                .buttonStyle(.plain)
+                .help("Click to Hide (Esc or ⌘W)")
             }
             .padding(.horizontal, 12)
             .frame(width: GameConfig.gameWidth, height: GameConfig.footerHeight)

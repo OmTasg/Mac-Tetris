@@ -135,7 +135,7 @@ struct ScoreHistoryView: View {
                     Text("Run:")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.gray)
-                    Text(formatClockTime(engine.currentRunTime))
+                    Text(engine.formattedRunTime)
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundColor(.yellow)
                 }

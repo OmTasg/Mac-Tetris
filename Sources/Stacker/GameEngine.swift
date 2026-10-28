@@ -25,7 +25,7 @@ final class GameEngine: ObservableObject {
     }
     @Published var highscore: Int = 0
     @Published var linesCleared: Int = 0
-    @Published var currentRunTime: Double = 0 // Active play time in seconds for this run
+    @Published var formattedRunTime: String = "00:00"
     @Published var isDead: Bool = false
     @Published var isPaused: Bool = false
     @Published var activeModalTab: ModalSheetTab = .leaderboard
@@ -36,8 +36,13 @@ final class GameEngine: ObservableObject {
             }
         }
     }
+    @Published private(set) var isStackInDangerZone: Bool = false
 
+    // Internal un-published time counter to prevent 60Hz SwiftUI invalidations
+    var currentRunTime: Double = 0
+    private var lastFormattedSecond: Int = -1
     private var totalPlayTimeAccumulator: Double = 0
+    private var periodicSaveCounter: Int = 0
 
     // Discrete gravity & lock timers
     private var gravityCounter: Int = 0
@@ -80,22 +85,39 @@ final class GameEngine: ObservableObject {
             self.currentRunTime = saved.currentRunTime
             self.isDead = false
             self.isPaused = true
+            updateFormattedRunTime()
+            updateDangerZoneStatus()
         } else {
             startNewGame()
         }
+    }
 
-        startLoop()
+    func updateFormattedRunTime() {
+        lastFormattedSecond = Int(currentRunTime)
+        formattedRunTime = formatClockTime(currentRunTime)
+    }
+
+    func updateDangerZoneStatus() {
+        for r in 0...6 {
+            if arena[r].contains(where: { $0 > 0 }) {
+                isStackInDangerZone = true
+                return
+            }
+        }
+        isStackInDangerZone = false
     }
 
     func startNewGame() {
-        flushActiveTime()
+        flushActiveTime(persist: true)
         arena = Array(repeating: Array(repeating: 0, count: GameConfig.columns), count: GameConfig.rows)
         score = 0
         linesCleared = 0
         currentRunTime = 0
+        updateFormattedRunTime()
         isDead = false
         isPaused = false
         isSoftDropping = false
+        isStackInDangerZone = false
         isLeftHeld = false
         isRightHeld = false
         leftHoldTimer = 0
@@ -109,6 +131,7 @@ final class GameEngine: ObservableObject {
 
         spawnPiece(shapeIndex: currentShapeIndex)
         saveCurrentState()
+        startLoop()
     }
 
     private func spawnPiece(shapeIndex: Int) {
@@ -143,10 +166,13 @@ final class GameEngine: ObservableObject {
     }
 
     func startLoop() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+        guard !isPaused && !isDead else { return }
+        if timer != nil { return }
+        let t = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        RunLoop.main.add(t, forMode: .common)
+        self.timer = t
     }
 
     func stopLoop() {
@@ -162,12 +188,27 @@ final class GameEngine: ObservableObject {
         let delta = 1.0 / 60.0
         currentRunTime += delta
         totalPlayTimeAccumulator += delta
+
+        // Only notify SwiftUI once per second when formatted string changes (avoids 60Hz invalidation storms)
+        let currentSec = Int(currentRunTime)
+        if currentSec != lastFormattedSecond {
+            lastFormattedSecond = currentSec
+            formattedRunTime = formatClockTime(currentRunTime)
+        }
+
         if totalPlayTimeAccumulator >= 1.0 {
-            ScoreHistoryManager.shared.addPlayTime(totalPlayTimeAccumulator)
+            ScoreHistoryManager.shared.addPlayTime(totalPlayTimeAccumulator, persistImmediately: false)
             totalPlayTimeAccumulator = 0
         }
         if isStackInDangerZone {
             ScoreHistoryManager.shared.addDangerZoneTime(delta)
+        }
+
+        // Periodic disk save every 30 seconds of continuous play to avoid SSD wear
+        periodicSaveCounter += 1
+        if periodicSaveCounter >= 1800 {
+            periodicSaveCounter = 0
+            ScoreHistoryManager.shared.save()
         }
 
         // 1. Smooth horizontal movement when holding keys
@@ -204,21 +245,12 @@ final class GameEngine: ObservableObject {
         }
     }
 
-    var isStackInDangerZone: Bool {
-        for r in 0...6 {
-            for c in 0..<GameConfig.columns {
-                if arena[r][c] > 0 {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    private func flushActiveTime() {
+    private func flushActiveTime(persist: Bool = false) {
         if totalPlayTimeAccumulator > 0 {
-            ScoreHistoryManager.shared.addPlayTime(totalPlayTimeAccumulator)
+            ScoreHistoryManager.shared.addPlayTime(totalPlayTimeAccumulator, persistImmediately: persist)
             totalPlayTimeAccumulator = 0
+        } else if persist {
+            ScoreHistoryManager.shared.save()
         }
     }
 
@@ -334,17 +366,21 @@ final class GameEngine: ObservableObject {
     // MARK: - Pause Controls
     func togglePause() {
         guard !isDead else { return }
-        flushActiveTime()
+        flushActiveTime(persist: true)
         isPaused.toggle()
         if isPaused {
+            stopLoop()
             saveCurrentState()
+        } else {
+            startLoop()
         }
     }
 
     func autoPause() {
         if !isDead && !isPaused {
-            flushActiveTime()
+            flushActiveTime(persist: true)
             isPaused = true
+            stopLoop()
             saveCurrentState()
         }
     }
@@ -426,6 +462,8 @@ final class GameEngine: ObservableObject {
             ScoreHistoryManager.shared.recordLineClears(count: cleared)
         }
 
+        updateDangerZoneStatus()
+
         currentShapeIndex = nextShapeIndex
         nextShapeIndex = bag.grabIndex()
         spawnPiece(shapeIndex: currentShapeIndex)
@@ -435,7 +473,8 @@ final class GameEngine: ObservableObject {
 
     private func die() {
         isDead = true
-        flushActiveTime()
+        stopLoop()
+        flushActiveTime(persist: true)
         ScoreHistoryManager.shared.recordGameFinished(score: score, lines: linesCleared, duration: currentRunTime)
         StateManager.shared.clearState()
     }
@@ -443,7 +482,7 @@ final class GameEngine: ObservableObject {
     // MARK: - State Persistence
     func saveCurrentState() {
         guard !isDead else { return }
-        flushActiveTime()
+        flushActiveTime(persist: true)
         let state = SavedGameState(
             arenaMatrix: arena,
             gridX: gridX,
@@ -473,9 +512,5 @@ final class GameEngine: ObservableObject {
 
     var nextShapeMatrix: [[Int]] {
         TetrominoType(rawValue: nextShapeIndex)?.defaultMatrix ?? []
-    }
-
-    var formattedRunTime: String {
-        formatClockTime(currentRunTime)
     }
 }

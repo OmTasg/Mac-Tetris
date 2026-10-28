@@ -304,11 +304,13 @@ final class ScoreHistoryManager: ObservableObject {
         return a
     }
 
-    func addPlayTime(_ seconds: Double) {
+    func addPlayTime(_ seconds: Double, persistImmediately: Bool = false) {
         guard seconds > 0 else { return }
         totalPlayTime += seconds
         analytics.totalPlayTime += seconds
-        save()
+        if persistImmediately {
+            save()
+        }
     }
 
     func addDangerZoneTime(_ seconds: Double) {

@@ -2,17 +2,20 @@ import AppKit
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    static weak var shared: AppDelegate?
+
     private var statusItem: NSStatusItem!
     private var panel: FloatingGamePanel!
     private let engine = GameEngine()
     private var keyMonitor: Any?
     private var globalClickMonitor: Any?
+    private var globalKeyMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppDelegate.shared = self
         setupStatusItem()
         setupPanel()
         setupKeyMonitor()
-        setupAutoPauseObservers()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.showPanel()
@@ -21,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         engine.saveCurrentState()
+        ScoreHistoryManager.shared.save()
     }
 
     func applicationDidResignActive(_ notification: Notification) {
@@ -69,8 +73,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func quitApp() {
+    @objc func quitApp() {
         engine.saveCurrentState()
+        ScoreHistoryManager.shared.save()
         NSApp.terminate(nil)
     }
 
@@ -95,7 +100,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func setupAutoPauseObservers() {
+    private func setupGlobalMonitors() {
+        removeGlobalMonitors()
+
+        // 1. Global click monitor to auto-pause when clicking outside
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             guard let self = self, self.panel.isVisible else { return }
             let mouseLocation = NSEvent.mouseLocation
@@ -104,6 +112,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.engine.autoPause()
                 }
             }
+        }
+
+        // 2. Global Escape key monitor: hitting Escape ANYWHERE closes Stacker immediately without clicking inside first!
+        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self = self, self.panel.isVisible else { return }
+            if event.keyCode == 53 { // Escape
+                DispatchQueue.main.async {
+                    self.hidePanel()
+                }
+            }
+        }
+    }
+
+    private func removeGlobalMonitors() {
+        if let m = globalClickMonitor {
+            NSEvent.removeMonitor(m)
+            globalClickMonitor = nil
+        }
+        if let m = globalKeyMonitor {
+            NSEvent.removeMonitor(m)
+            globalKeyMonitor = nil
         }
     }
 
@@ -130,11 +159,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+
+        if !engine.isPaused && !engine.isDead {
+            engine.startLoop()
+        }
+        setupGlobalMonitors()
     }
 
     func hidePanel() {
         engine.autoPause()
+        engine.stopLoop()
         panel.orderOut(nil)
+        removeGlobalMonitors()
     }
 
     // MARK: - Keyboard Monitoring with Key Hold Support
@@ -143,6 +179,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self = self, self.panel.isVisible else { return event }
 
             let isDown = event.type == .keyDown
+
+            // Command shortcuts: ⌘W closes window, ⌘Q quits app
+            if event.modifierFlags.contains(.command) && isDown {
+                switch event.charactersIgnoringModifiers?.lowercased() {
+                case "w":
+                    self.hidePanel()
+                    return nil
+                case "q":
+                    self.quitApp()
+                    return nil
+                default:
+                    break
+                }
+            }
 
             switch event.keyCode {
             // Left Arrow (123) / 'A' (0): Hold to move continuously
