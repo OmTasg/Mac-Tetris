@@ -66,6 +66,7 @@ struct GameView: View {
 
                 // High Score Text centered directly below red line
                 Button(action: {
+                    engine.activeModalTab = .leaderboard
                     engine.showHistory = true
                 }) {
                     HStack(spacing: 4) {
@@ -140,7 +141,7 @@ struct GameView: View {
                             .cornerRadius(8)
                             .padding(.top, 6)
 
-                        Button("View High Scores") {
+                        Button("View Scores & Analytics") {
                             engine.showHistory = true
                         }
                         .font(.system(size: 12))
@@ -195,14 +196,27 @@ struct GameView: View {
 
             // Minimal Footer (Below canvas, never overlapping Row 17)
             HStack {
-                Button(action: {
-                    engine.showHistory = true
-                }) {
-                    Text("🏆 Scores")
-                        .font(.system(size: 11))
-                        .foregroundColor(.gray)
+                HStack(spacing: 8) {
+                    Button(action: {
+                        engine.activeModalTab = .leaderboard
+                        engine.showHistory = true
+                    }) {
+                        Text("🏆 Scores")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: {
+                        engine.activeModalTab = .analytics
+                        engine.showHistory = true
+                    }) {
+                        Text("📊 Stats")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
                 Spacer()
 
@@ -225,7 +239,7 @@ struct GameView: View {
                         .foregroundColor(.gray)
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 12)
             .frame(width: GameConfig.gameWidth, height: GameConfig.footerHeight)
             .background(Color(hex: "#111111"))
         }

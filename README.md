@@ -42,11 +42,18 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
   - Remembers the exact board matrix, current falling piece position, current rotation, upcoming piece, score, and high score.
   - Reopens in paused state so you never lose a block unexpectedly.
 
-- **Local High Score History & Active Play Time Tracking**:
+- **Local High Score History & Deep Analytics Dashboard**:
   - Saved locally to `~/Library/Application Support/Stacker/scores.json`.
-  - Tracks **Total Active Play Time** across the app and **Per-Run Duration** for each game run.
-  - Time tracking **only counts active gameplay** (strictly freezes while paused, dead, or when the window loses focus).
-  - Click on **"High score: ..."** or **"🏆 Scores"** to view the leaderboard with scores, lines cleared, duration, and dates.
+  - Accessible via **"🏆 Scores"** and **"📊 Stats"** buttons in the footer with tabbed navigation:
+    - **Leaderboard Tab**: Top 50 scores with lines cleared, active run durations, and timestamps.
+    - **Analytics Tab**: Deep performance telemetry and insights:
+      - **Player Archetype System**: Dynamic algorithmic titles (*Speed Demon*, *Danger Walker*, *Tetris Architect*, *Endurance Titan*, *Tactical Stacker*).
+      - **Time & Endurance**: All-time active play time, longest survival record, average run length, and **Danger Zone Survival Time** (time spent surviving with the stack near the ceiling line).
+      - **Speed & Pacing**: Pieces Per Minute (PPM), Score Per Minute (SPM), and average score per run.
+      - **Line Clear Mastery**: Visual **Tetris Rate** meter (% of lines cleared from 4-line quad clears) and clear distributions.
+      - **Drop Aggression**: Hard drops vs soft drops ratio, and total distance slammed down.
+      - **Piece Radar**: 7-bag tetromino placement distribution and favorite/most dropped piece.
+  - Active time tracking **strictly counts active gameplay only** (freezes while paused, dead, or backgrounded).
 
 ---
 

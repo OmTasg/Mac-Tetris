@@ -2,6 +2,11 @@ import Foundation
 import SwiftUI
 import Combine
 
+enum ModalSheetTab: String, CaseIterable {
+    case leaderboard = "Leaderboard"
+    case analytics = "Analytics"
+}
+
 final class GameEngine: ObservableObject {
     @Published var arena: [[Int]]
     @Published var gridX: Int = 3
@@ -23,6 +28,7 @@ final class GameEngine: ObservableObject {
     @Published var currentRunTime: Double = 0 // Active play time in seconds for this run
     @Published var isDead: Bool = false
     @Published var isPaused: Bool = false
+    @Published var activeModalTab: ModalSheetTab = .leaderboard
     @Published var showHistory: Bool = false {
         didSet {
             if showHistory && !isDead && !isPaused {
@@ -160,6 +166,9 @@ final class GameEngine: ObservableObject {
             ScoreHistoryManager.shared.addPlayTime(totalPlayTimeAccumulator)
             totalPlayTimeAccumulator = 0
         }
+        if isStackInDangerZone {
+            ScoreHistoryManager.shared.addDangerZoneTime(delta)
+        }
 
         // 1. Smooth horizontal movement when holding keys
         handleHolding()
@@ -177,6 +186,7 @@ final class GameEngine: ObservableObject {
                 gridY += 1
                 if isSoftDropping {
                     score += 1
+                    ScoreHistoryManager.shared.recordSoftDrop()
                 }
             }
         } else {
@@ -192,6 +202,17 @@ final class GameEngine: ObservableObject {
                 lockResets = 0
             }
         }
+    }
+
+    var isStackInDangerZone: Bool {
+        for r in 0...6 {
+            for c in 0..<GameConfig.columns {
+                if arena[r][c] > 0 {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
     private func flushActiveTime() {
@@ -281,6 +302,7 @@ final class GameEngine: ObservableObject {
         if rowsDropped > 0 {
             score += rowsDropped * 2
         }
+        ScoreHistoryManager.shared.recordHardDrop(rows: rowsDropped)
 
         gridY = targetY
         mergeCurrentPiece()
@@ -368,6 +390,8 @@ final class GameEngine: ObservableObject {
             }
         }
 
+        ScoreHistoryManager.shared.recordPiecePlaced(shapeIndex: currentShapeIndex)
+
         // Check death condition: any settled block in rows 0..<4
         var hitCeiling = false
         for r in 0..<GameConfig.deathLimitRow {
@@ -399,6 +423,7 @@ final class GameEngine: ObservableObject {
 
         if cleared > 0 {
             score += Int(round(lineClearScore))
+            ScoreHistoryManager.shared.recordLineClears(count: cleared)
         }
 
         currentShapeIndex = nextShapeIndex
@@ -411,7 +436,7 @@ final class GameEngine: ObservableObject {
     private func die() {
         isDead = true
         flushActiveTime()
-        ScoreHistoryManager.shared.record(score: score, lines: linesCleared, duration: currentRunTime)
+        ScoreHistoryManager.shared.recordGameFinished(score: score, lines: linesCleared, duration: currentRunTime)
         StateManager.shared.clearState()
     }
 

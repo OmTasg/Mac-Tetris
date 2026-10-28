@@ -13,16 +13,49 @@ struct ScoreHistoryView: View {
                     engine.showHistory = false
                 }
 
-            VStack(spacing: 10) {
-                // Header
-                HStack {
-                    Image(systemName: "trophy.fill")
-                        .foregroundColor(.yellow)
-                        .font(.system(size: 16))
-                    Text("High Score History")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
+            VStack(spacing: 8) {
+                // Top Tab Switcher & Close Button
+                HStack(spacing: 6) {
+                    Button(action: {
+                        engine.activeModalTab = .leaderboard
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 11))
+                            Text("Leaderboard")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .foregroundColor(engine.activeModalTab == .leaderboard ? .white : .gray)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(engine.activeModalTab == .leaderboard ? Color.white.opacity(0.18) : Color.clear)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: {
+                        engine.activeModalTab = .analytics
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chart.bar.xaxis")
+                                .font(.system(size: 11))
+                            Text("Analytics")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .foregroundColor(engine.activeModalTab == .analytics ? .white : .gray)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(engine.activeModalTab == .analytics ? Color.white.opacity(0.18) : Color.clear)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
                     Spacer()
+
                     Button(action: {
                         engine.showHistory = false
                     }) {
@@ -32,112 +65,23 @@ struct ScoreHistoryView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-
-                // Total Play Time Pill (Cumulative active time in app & current run)
-                HStack(spacing: 10) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "clock.fill")
-                            .foregroundColor(.cyan)
-                            .font(.system(size: 11))
-                        Text("Total:")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.gray)
-                        Text(formatTime(history.totalPlayTime))
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
-                    }
-
-                    Text("•")
-                        .foregroundColor(.gray.opacity(0.4))
-
-                    HStack(spacing: 5) {
-                        Text("Current:")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.gray)
-                        Text(formatClockTime(engine.currentRunTime))
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(.yellow)
-                    }
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(Color.white.opacity(0.08))
-                )
+                .padding(.horizontal, 14)
+                .padding(.top, 12)
 
                 Divider()
                     .background(Color.gray.opacity(0.4))
 
-                // Score list with per-run time tracking
-                if history.entries.isEmpty {
-                    VStack(spacing: 8) {
-                        Spacer()
-                        Image(systemName: "gamecontroller")
-                            .font(.system(size: 30))
-                            .foregroundColor(.gray)
-                        Text("No scores recorded yet")
-                            .font(.system(size: 13))
-                            .foregroundColor(.gray)
-                        Text("Play a game and set your first record!")
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray.opacity(0.8))
-                        Spacer()
-                    }
-                    .frame(height: 250)
+                // Tab Content
+                if engine.activeModalTab == .leaderboard {
+                    leaderboardContent
                 } else {
-                    ScrollView {
-                        VStack(spacing: 6) {
-                            ForEach(Array(history.entries.enumerated()), id: \.element.id) { index, entry in
-                                HStack {
-                                    // Rank badge
-                                    Text("#\(index + 1)")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(rankColor(index))
-                                        .frame(width: 26, alignment: .leading)
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("\(entry.score)")
-                                            .font(.system(size: 15, weight: .bold, design: .monospaced))
-                                            .foregroundColor(.white)
-                                        HStack(spacing: 4) {
-                                            Text("\(entry.lines) lines")
-                                            Text("•")
-                                            Text("⏱ \(entry.formattedDuration)")
-                                            Text("•")
-                                            Text(entry.formattedDate)
-                                        }
-                                        .font(.system(size: 9.5))
-                                        .foregroundColor(.gray)
-                                    }
-
-                                    Spacer()
-
-                                    if index == 0 {
-                                        Image(systemName: "crown.fill")
-                                            .foregroundColor(.yellow)
-                                            .font(.system(size: 12))
-                                    }
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(index == 0 ? Color.yellow.opacity(0.12) : Color.white.opacity(0.06))
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                    }
-                    .frame(maxHeight: 280)
+                    AnalyticsDashboardView(analytics: history.analytics, engine: engine)
                 }
 
                 Divider()
                     .background(Color.gray.opacity(0.4))
 
-                // Footer (No Clear History button)
+                // Footer
                 HStack {
                     Spacer()
                     Button("Close") {
@@ -151,19 +95,118 @@ struct ScoreHistoryView: View {
                     .cornerRadius(6)
                     .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
             }
-            .frame(width: 272)
+            .frame(width: 278)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(Color(hex: "#161616"))
+                    .fill(Color(hex: "#151515"))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(Color.white.opacity(0.15), lineWidth: 1)
                     )
             )
             .shadow(radius: 20)
+        }
+    }
+
+    // MARK: - Leaderboard Tab Content
+    private var leaderboardContent: some View {
+        VStack(spacing: 8) {
+            // Live Time Pill (Total app time & current run)
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.fill")
+                        .foregroundColor(.cyan)
+                        .font(.system(size: 10))
+                    Text("Total:")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.gray)
+                    Text(formatTime(history.totalPlayTime))
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
+                }
+
+                Text("•")
+                    .foregroundColor(.gray.opacity(0.4))
+
+                HStack(spacing: 4) {
+                    Text("Run:")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.gray)
+                    Text(formatClockTime(engine.currentRunTime))
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(.yellow)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.08))
+            )
+
+            if history.entries.isEmpty {
+                VStack(spacing: 8) {
+                    Spacer()
+                    Image(systemName: "gamecontroller")
+                        .font(.system(size: 28))
+                        .foregroundColor(.gray)
+                    Text("No scores recorded yet")
+                        .font(.system(size: 13))
+                        .foregroundColor(.gray)
+                    Text("Play a game and set your first record!")
+                        .font(.system(size: 11))
+                        .foregroundColor(.gray.opacity(0.8))
+                    Spacer()
+                }
+                .frame(height: 270)
+            } else {
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(Array(history.entries.enumerated()), id: \.element.id) { index, entry in
+                            HStack {
+                                Text("#\(index + 1)")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(rankColor(index))
+                                    .frame(width: 26, alignment: .leading)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(entry.score)")
+                                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.white)
+                                    HStack(spacing: 4) {
+                                        Text("\(entry.lines) lines")
+                                        Text("•")
+                                        Text("⏱ \(entry.formattedDuration)")
+                                        Text("•")
+                                        Text(entry.formattedDate)
+                                    }
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.gray)
+                                }
+
+                                Spacer()
+
+                                if index == 0 {
+                                    Image(systemName: "crown.fill")
+                                        .foregroundColor(.yellow)
+                                        .font(.system(size: 12))
+                                }
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(index == 0 ? Color.yellow.opacity(0.12) : Color.white.opacity(0.06))
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                }
+                .frame(maxHeight: 290)
+            }
         }
     }
 
@@ -174,5 +217,373 @@ struct ScoreHistoryView: View {
         case 2: return Color(hex: "#CD7F32")
         default: return .gray
         }
+    }
+}
+
+// MARK: - Analytics Dashboard View
+struct AnalyticsDashboardView: View {
+    let analytics: GameAnalytics
+    @ObservedObject var engine: GameEngine
+
+    var body: some View {
+        ScrollView(showsIndicators: true) {
+            VStack(spacing: 12) {
+                // 1. Archetype Banner
+                archetypeBanner
+
+                // 2. Time & Endurance Section
+                VStack(alignment: .leading, spacing: 6) {
+                    sectionHeader(title: "TIME & ENDURANCE", icon: "clock.fill", color: .cyan)
+
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                        AnalyticsMetricTile(
+                            title: "Total Play Time",
+                            value: formatTime(analytics.totalPlayTime),
+                            subtitle: "Active in-app play",
+                            icon: "hourglass",
+                            iconColor: .cyan
+                        )
+
+                        AnalyticsMetricTile(
+                            title: "Longest Run",
+                            value: formatTime(analytics.longestRunDuration),
+                            subtitle: "Survival record",
+                            icon: "crown.fill",
+                            iconColor: .yellow
+                        )
+
+                        AnalyticsMetricTile(
+                            title: "Average Run",
+                            value: formatTime(analytics.averageRunDuration),
+                            subtitle: "\(analytics.totalGamesPlayed) runs logged",
+                            icon: "timer",
+                            iconColor: .green
+                        )
+
+                        AnalyticsMetricTile(
+                            title: "Danger Zone",
+                            value: formatTime(analytics.dangerZoneSurvivalTime),
+                            subtitle: "Stack at row ≤ 6",
+                            icon: "flame.fill",
+                            iconColor: Color(hex: "#FF0D72")
+                        )
+                    }
+                }
+
+                // 3. Speed & Pacing Section
+                VStack(alignment: .leading, spacing: 6) {
+                    sectionHeader(title: "SPEED & EFFICIENCY", icon: "bolt.fill", color: .yellow)
+
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                        AnalyticsMetricTile(
+                            title: "Pieces / Min",
+                            value: String(format: "%.1f", analytics.piecesPerMinute),
+                            subtitle: "Drop speed rate",
+                            icon: "speedometer",
+                            iconColor: .orange
+                        )
+
+                        AnalyticsMetricTile(
+                            title: "Score / Min",
+                            value: String(format: "%.0f", analytics.scorePerMinute),
+                            subtitle: "Points efficiency",
+                            icon: "chart.line.uptrend.xyaxis",
+                            iconColor: .purple
+                        )
+
+                        AnalyticsMetricTile(
+                            title: "Total Blocks",
+                            value: "\(analytics.totalPiecesPlaced)",
+                            subtitle: "Placed & locked",
+                            icon: "square.grid.3x3.fill",
+                            iconColor: .blue
+                        )
+
+                        AnalyticsMetricTile(
+                            title: "Avg Score / Run",
+                            value: "\(analytics.averageScore)",
+                            subtitle: "Per-game points",
+                            icon: "target",
+                            iconColor: .mint
+                        )
+                    }
+                }
+
+                // 4. Tetris Rate & Clear Breakdown
+                VStack(alignment: .leading, spacing: 6) {
+                    sectionHeader(title: "LINE CLEAR MASTERY", icon: "sparkles", color: Color(hex: "#F538FF"))
+
+                    // Tetris Rate Card with progress bar
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Tetris Rate")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.white)
+                                Text("Lines from 4-line Tetrises")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.gray)
+                            }
+
+                            Spacer()
+
+                            Text(String(format: "%.1f%%", analytics.tetrisRate))
+                                .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                                .foregroundColor(Color(hex: "#F538FF"))
+                        }
+
+                        // Progress bar
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule()
+                                    .fill(Color.white.opacity(0.1))
+                                    .frame(height: 6)
+
+                                Capsule()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color(hex: "#0DC2FF"), Color(hex: "#F538FF")],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(analytics.tetrisRate / 100.0))), height: 6)
+                            }
+                        }
+                        .frame(height: 6)
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.06))
+                    )
+
+                    // Breakdown Rows
+                    VStack(spacing: 4) {
+                        clearBreakdownRow(name: "Tetris (4 lines)", count: analytics.tetrisCount, color: Color(hex: "#F538FF"), pts: "+609 ea")
+                        clearBreakdownRow(name: "Triple (3 lines)", count: analytics.triplesCount, color: Color(hex: "#3877FF"), pts: "+356 ea")
+                        clearBreakdownRow(name: "Double (2 lines)", count: analytics.doublesCount, color: Color(hex: "#0DFF72"), pts: "+188 ea")
+                        clearBreakdownRow(name: "Single (1 line)", count: analytics.singlesCount, color: Color(hex: "#FF8E0D"), pts: "+75 ea")
+                    }
+                }
+
+                // 5. Playstyle: Hard Drop Slammer vs Soft Drop
+                VStack(alignment: .leading, spacing: 6) {
+                    sectionHeader(title: "DROP AGGRESSION", icon: "arrow.down.to.line.compact", color: Color(hex: "#0DC2FF"))
+
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text("Hard Drops (Spacebar)")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Text("\(analytics.hardDropCount) (\(String(format: "%.0f%%", analytics.hardDropPercentage)))")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(Color(hex: "#0DC2FF"))
+                        }
+
+                        HStack {
+                            Text("Total Rows Slammed")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.gray)
+                            Spacer()
+                            Text("\(analytics.hardDropTotalRows) rows")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.06))
+                    )
+                }
+
+                // 6. Tetromino Distribution & Favorite Piece
+                VStack(alignment: .leading, spacing: 6) {
+                    sectionHeader(title: "PIECE RADAR", icon: "square.fill.on.square.fill", color: .mint)
+
+                    if let favIdx = analytics.favoritePieceIndex,
+                       let favType = TetrominoType(rawValue: favIdx) {
+                        HStack(spacing: 10) {
+                            Text(favType.name)
+                                .font(.system(size: 18, weight: .black))
+                                .foregroundColor(favType.color)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(favType.color.opacity(0.2))
+                                )
+
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Most Placed: \(favType.name)-Piece")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.white)
+                                Text("\(analytics.pieceCounts[favIdx]) times dropped")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.gray)
+                            }
+                            Spacer()
+                        }
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.06))
+                        )
+                    }
+
+                    // 7 piece mini bars
+                    VStack(spacing: 4) {
+                        ForEach(TetrominoType.allCases, id: \.rawValue) { piece in
+                            let count = analytics.pieceCounts.indices.contains(piece.rawValue) ? analytics.pieceCounts[piece.rawValue] : 0
+                            let pct = analytics.totalPiecesPlaced > 0 ? Double(count) / Double(analytics.totalPiecesPlaced) * 100.0 : 0
+
+                            HStack(spacing: 6) {
+                                Text(piece.name)
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(piece.color)
+                                    .frame(width: 14, alignment: .leading)
+
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        Capsule()
+                                            .fill(Color.white.opacity(0.08))
+                                            .frame(height: 5)
+                                        Capsule()
+                                            .fill(piece.color)
+                                            .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(pct / 100.0))), height: 5)
+                                    }
+                                }
+                                .frame(height: 5)
+
+                                Text("\(count)")
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundColor(.gray)
+                                    .frame(width: 30, alignment: .trailing)
+                            }
+                        }
+                    }
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.white.opacity(0.04))
+                    )
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+        .frame(maxHeight: 320)
+    }
+
+    // MARK: - Subviews
+    private var archetypeBanner: some View {
+        let arch = analytics.archetype
+        return HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color(hex: arch.color).opacity(0.2))
+                    .frame(width: 38, height: 38)
+                Image(systemName: arch.icon)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(Color(hex: arch.color))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(arch.title.uppercased())
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                Text(arch.subtitle)
+                    .font(.system(size: 9))
+                    .foregroundColor(.gray)
+                    .lineLimit(2)
+            }
+            Spacer()
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: arch.color).opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+
+    private func sectionHeader(title: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 9))
+                .foregroundColor(color)
+            Text(title)
+                .font(.system(size: 9.5, weight: .bold))
+                .foregroundColor(.gray)
+        }
+        .padding(.top, 4)
+    }
+
+    private func clearBreakdownRow(name: String, count: Int, color: Color, pts: String) -> some View {
+        HStack {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(name)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.white)
+            Text(pts)
+                .font(.system(size: 8.5))
+                .foregroundColor(.gray.opacity(0.7))
+            Spacer()
+            Text("\(count)")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(.white)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.white.opacity(0.04))
+        )
+    }
+}
+
+// MARK: - Metric Tile Subview
+struct AnalyticsMetricTile: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let icon: String
+    let iconColor: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 9))
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+            }
+
+            Text(value)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Text(subtitle)
+                .font(.system(size: 8))
+                .foregroundColor(.gray.opacity(0.7))
+                .lineLimit(1)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.06))
+        )
     }
 }
