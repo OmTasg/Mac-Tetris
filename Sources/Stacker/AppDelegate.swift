@@ -96,20 +96,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: panel,
             queue: .main
         ) { [weak self] _ in
-            self?.engine.autoPause()
+            self?.hidePanel()
         }
     }
 
     private func setupGlobalMonitors() {
         removeGlobalMonitors()
 
-        // 1. Global click monitor to auto-pause when clicking outside
+        // 1. Global click monitor to automatically close the app when clicking outside
         globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             guard let self = self, self.panel.isVisible else { return }
             let mouseLocation = NSEvent.mouseLocation
+
+            // If user clicked the menu bar icon itself, let handleStatusItemClick handle the toggle
+            if let button = self.statusItem.button,
+               let buttonWindow = button.window,
+               buttonWindow.frame.contains(mouseLocation) {
+                return
+            }
+
             if !self.panel.frame.contains(mouseLocation) {
                 DispatchQueue.main.async {
-                    self.engine.autoPause()
+                    self.hidePanel()
                 }
             }
         }

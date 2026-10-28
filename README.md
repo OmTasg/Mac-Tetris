@@ -10,7 +10,7 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
   - Sits in the top macOS menu bar with a custom Tetris icon.
   - Clicking the icon toggles the game window directly underneath.
   - **Always on top**: Floats above all other applications (`NSWindow.Level.floating`).
-  - **Auto-Pause on Blur**: Clicking outside the app or switching apps automatically pauses the game.
+  - **Auto-Close on Click Outside**: Clicking outside the app or switching to another app automatically pauses and closes the window.
   - **Draggable**: Drag anywhere on screen by clicking and moving the window.
 
 - **Strict Grid Alignment & Visibility**:
