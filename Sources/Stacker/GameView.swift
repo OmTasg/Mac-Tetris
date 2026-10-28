@@ -37,7 +37,7 @@ struct GameView: View {
                     }
 
                     // 2. Active Falling Tetromino (100% Solid Flat Colors, No Lines or Gaps)
-                    if !engine.isDead {
+                    if !engine.isDead && !engine.isSpawning {
                         let shape = engine.currentShape
                         for r in 0..<shape.count {
                             for c in 0..<shape[r].count {

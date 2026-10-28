@@ -37,6 +37,7 @@ final class GameEngine: ObservableObject {
         }
     }
     @Published private(set) var isStackInDangerZone: Bool = false
+    @Published var isSpawning: Bool = false
 
     // Internal un-published time counter to prevent 60Hz SwiftUI invalidations
     var currentRunTime: Double = 0
@@ -52,6 +53,9 @@ final class GameEngine: ObservableObject {
     private let standardLockDelay: Int = 27 // 27 frames = 450ms (matches original Stacker LOCK_DELAY)
     private var isSoftDropping: Bool = false
     private var hasMovedDown: Bool = false
+    private var spawnDelayTimer: Int = 0
+    private let spawnDelayFrames: Int = 5 // ~83ms golden-ratio spawn delay (5 frames at 60 FPS)
+    private var softDropScoreAccumulator: Double = 0
 
     // Symmetrical, perfectly matched movement speeds
     private var isLeftHeld: Bool = false
@@ -126,6 +130,9 @@ final class GameEngine: ObservableObject {
         gravityCounter = 0
         lockTimer = 0
         lockResets = 0
+        spawnDelayTimer = 0
+        isSpawning = false
+        softDropScoreAccumulator = 0
 
         currentShapeIndex = bag.grabIndex()
         nextShapeIndex = bag.grabIndex()
@@ -212,6 +219,16 @@ final class GameEngine: ObservableObject {
             ScoreHistoryManager.shared.save()
         }
 
+        // Tiny golden-ratio spawn delay between pieces (5 frames = ~83ms)
+        if spawnDelayTimer > 0 {
+            spawnDelayTimer -= 1
+            if spawnDelayTimer == 0 {
+                isSpawning = false
+                spawnPiece(shapeIndex: currentShapeIndex)
+            }
+            return
+        }
+
         // 1. Smooth horizontal movement when holding keys
         handleHolding()
 
@@ -228,7 +245,13 @@ final class GameEngine: ObservableObject {
                 gridY += 1
                 hasMovedDown = true
                 if isSoftDropping {
-                    score += 1
+                    // +20% boost to soft drop (1.2 pts per row, integer-aligned via accumulator)
+                    softDropScoreAccumulator += 1.2
+                    let whole = Int(softDropScoreAccumulator)
+                    if whole > 0 {
+                        score += whole
+                        softDropScoreAccumulator -= Double(whole)
+                    }
                     ScoreHistoryManager.shared.recordSoftDrop()
                 }
             }
@@ -252,7 +275,7 @@ final class GameEngine: ObservableObject {
     private func lockPiece() {
         guard !isDead && !isPaused else { return }
         mergeCurrentPiece()
-        score += 10
+        score += 12 // +20% boost to placement landing score (was 10)
         lockTimer = 0
         gravityCounter = 0
         lockResets = 0
@@ -315,7 +338,7 @@ final class GameEngine: ObservableObject {
     }
 
     func moveLeft() {
-        guard !isDead && !isPaused else { return }
+        guard !isDead && !isPaused && !isSpawning else { return }
         if canPlace(shape: currentShape, atX: gridX - 1, atY: gridY) {
             gridX -= 1
             onPieceMovedOrRotated()
@@ -323,7 +346,7 @@ final class GameEngine: ObservableObject {
     }
 
     func moveRight() {
-        guard !isDead && !isPaused else { return }
+        guard !isDead && !isPaused && !isSpawning else { return }
         if canPlace(shape: currentShape, atX: gridX + 1, atY: gridY) {
             gridX += 1
             onPieceMovedOrRotated()
@@ -332,15 +355,15 @@ final class GameEngine: ObservableObject {
 
     func setSoftDropping(_ active: Bool) {
         isSoftDropping = active
-        // Only lock immediately on press if the piece has already moved down from spawn
-        if active && hasMovedDown && !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
+        // Only lock immediately on press if the piece has already moved down from spawn and not spawning
+        if active && hasMovedDown && !isSpawning && !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
             lockPiece()
         }
     }
 
     // MARK: - Hard Drop (Spacebar)
     func hardDrop() {
-        guard !isDead && !isPaused else { return }
+        guard !isDead && !isPaused && !isSpawning else { return }
 
         var targetY = gridY
         while canPlace(shape: currentShape, atX: gridX, atY: targetY + 1) {
@@ -349,17 +372,19 @@ final class GameEngine: ObservableObject {
 
         let rowsDropped = targetY - gridY
         if rowsDropped > 0 {
-            score += rowsDropped * 2
+            // +20% boost to hard drop score (was rowsDropped * 2)
+            score += Int(round(Double(rowsDropped) * 2.4))
         }
         ScoreHistoryManager.shared.recordHardDrop(rows: rowsDropped)
 
         gridY = targetY
+        hasMovedDown = true
         lockPiece()
     }
 
     // MARK: - Linear Rotation with Wall Kicks
     func rotate(dir: Int = 1) {
-        guard !isDead && !isPaused else { return }
+        guard !isDead && !isPaused && !isSpawning else { return }
         guard let piece = TetrominoType(rawValue: currentShapeIndex) else { return }
 
         let nextRot = (currentRotation + dir + 4) % 4
@@ -474,7 +499,8 @@ final class GameEngine: ObservableObject {
                 arena.remove(at: r)
                 arena.insert(Array(repeating: 0, count: GameConfig.columns), at: 0)
 
-                lineClearScore = (lineClearScore * 1.5) + 75.0
+                // +20% boost to line clear score formula (was 75.0 base -> now 90.0 base)
+                lineClearScore = (lineClearScore * 1.5) + 90.0
                 cleared += 1
                 linesCleared += 1
             }
@@ -489,7 +515,8 @@ final class GameEngine: ObservableObject {
 
         currentShapeIndex = nextShapeIndex
         nextShapeIndex = bag.grabIndex()
-        spawnPiece(shapeIndex: currentShapeIndex)
+        isSpawning = true
+        spawnDelayTimer = spawnDelayFrames // Tiny spawn delay (5 frames = ~83ms)
 
         saveCurrentState()
     }

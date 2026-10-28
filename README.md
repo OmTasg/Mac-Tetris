@@ -27,15 +27,15 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
   - Pressing **Spacebar** instantly hard-drops the tetromino to the bottom and locks it.
   - Pressing **Spacebar** after dying instantly restarts the game!
 
-- **Exact Scoring Formula**:
-  - **Piece Placement**: `+10` points for merging a block.
-  - **Soft Drop / Boost**: `+1` point per row while holding Down / S.
-  - **Hard Drop**: `+2` points per row dropped with Spacebar.
+- **Boosted Scoring Formula (+20%)**:
+  - **Piece Placement**: `+12` points for merging a block (boosted from 10).
+  - **Soft Drop / Boost**: `+1.2` points per row while holding Down / S (boosted from 1).
+  - **Hard Drop**: `+2.4` points per row dropped with Spacebar (boosted from 2).
   - **Line Clear Compound Multiplier**:
-    - 1 line: `75` points
-    - 2 lines: `188` points (`75 * 1.5 + 75 = 187.5`)
-    - 3 lines: `356` points (`187.5 * 1.5 + 75 = 356.25`)
-    - 4 lines (Tetris): `609` points (`356.25 * 1.5 + 75 = 609.375`)
+    - 1 line: `90` points (boosted from 75)
+    - 2 lines: `225` points (`90 * 1.5 + 90 = 225`, boosted from 188)
+    - 3 lines: `428` points (`225 * 1.5 + 90 = 427.5`, boosted from 356)
+    - 4 lines (Tetris): `731` points (`427.5 * 1.5 + 90 = 731.25`, boosted from 609)
 
 - **State Persistence (Close & Reopen)**:
   - Game state automatically serializes to `~/Library/Application Support/Stacker/gamestate.json`.
