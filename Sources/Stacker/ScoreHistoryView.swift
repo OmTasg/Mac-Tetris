@@ -147,7 +147,7 @@ struct ScoreHistoryView: View {
                     .fill(Color.white.opacity(0.08))
             )
 
-            if history.entries.isEmpty {
+            if history.entries.isEmpty && !isCurrentRunBest {
                 VStack(spacing: 8) {
                     Spacer()
                     Image(systemName: "gamecontroller")
@@ -165,11 +165,61 @@ struct ScoreHistoryView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 6) {
-                        ForEach(Array(history.entries.enumerated()), id: \.element.id) { index, entry in
+                        // Current live run highlighted at #1 if it's the personal best
+                        if isCurrentRunBest {
                             HStack {
-                                Text("#\(index + 1)")
+                                HStack(spacing: 3) {
+                                    Text("#1")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.yellow)
+                                    Text("LIVE")
+                                        .font(.system(size: 7.5, weight: .black))
+                                        .foregroundColor(.black)
+                                        .padding(.horizontal, 3)
+                                        .padding(.vertical, 1)
+                                        .background(Capsule().fill(Color.yellow))
+                                }
+                                .frame(width: 44, alignment: .leading)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(engine.score)")
+                                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.yellow)
+                                    HStack(spacing: 4) {
+                                        Text("\(engine.linesCleared) lines")
+                                        Text("•")
+                                        Text("⏱ \(engine.formattedRunTime)")
+                                        Text("•")
+                                        Text("In Progress")
+                                    }
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.yellow.opacity(0.85))
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "crown.fill")
+                                    .foregroundColor(.yellow)
+                                    .font(.system(size: 12))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.yellow.opacity(0.18))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
+                                    )
+                            )
+                        }
+
+                        ForEach(Array(history.entries.enumerated()), id: \.element.id) { index, entry in
+                            let rank = isCurrentRunBest ? index + 2 : index + 1
+                            HStack {
+                                Text("#\(rank)")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(rankColor(index))
+                                    .foregroundColor(rankColor(rank - 1))
                                     .frame(width: 26, alignment: .leading)
 
                                 VStack(alignment: .leading, spacing: 2) {
@@ -189,7 +239,7 @@ struct ScoreHistoryView: View {
 
                                 Spacer()
 
-                                if index == 0 {
+                                if rank == 1 {
                                     Image(systemName: "crown.fill")
                                         .foregroundColor(.yellow)
                                         .font(.system(size: 12))
@@ -199,7 +249,7 @@ struct ScoreHistoryView: View {
                             .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(index == 0 ? Color.yellow.opacity(0.12) : Color.white.opacity(0.06))
+                                    .fill(rank == 1 ? Color.yellow.opacity(0.12) : Color.white.opacity(0.06))
                             )
                         }
                     }
@@ -208,6 +258,12 @@ struct ScoreHistoryView: View {
                 .frame(maxHeight: 290)
             }
         }
+    }
+
+    private var isCurrentRunBest: Bool {
+        guard !engine.isDead && engine.score > 0 else { return false }
+        let topScore = history.entries.first?.score ?? 0
+        return engine.score >= topScore
     }
 
     private func rankColor(_ rank: Int) -> Color {
@@ -225,9 +281,20 @@ struct AnalyticsDashboardView: View {
     let analytics: GameAnalytics
     @ObservedObject var engine: GameEngine
 
+    private var isCurrentRunBest: Bool {
+        guard !engine.isDead && engine.score > 0 else { return false }
+        let topScore = ScoreHistoryManager.shared.entries.first?.score ?? 0
+        return engine.score >= topScore
+    }
+
     var body: some View {
         ScrollView(showsIndicators: true) {
             VStack(spacing: 12) {
+                // Top Highlight if current run is your best run!
+                if isCurrentRunBest {
+                    currentRunBestBanner
+                }
+
                 // 1. Archetype Banner
                 archetypeBanner
 
@@ -246,7 +313,7 @@ struct AnalyticsDashboardView: View {
 
                         AnalyticsMetricTile(
                             title: "Longest Run",
-                            value: formatTime(analytics.longestRunDuration),
+                            value: formatTime(max(analytics.longestRunDuration, engine.currentRunTime)),
                             subtitle: "Survival record",
                             icon: "crown.fill",
                             iconColor: .yellow
@@ -477,6 +544,48 @@ struct AnalyticsDashboardView: View {
     }
 
     // MARK: - Subviews
+    private var currentRunBestBanner: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color.yellow.opacity(0.2))
+                    .frame(width: 38, height: 38)
+                Image(systemName: "crown.fill")
+                    .foregroundColor(.yellow)
+                    .font(.system(size: 16))
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text("CURRENT RUN IS YOUR BEST RUN!")
+                        .font(.system(size: 10.5, weight: .black, design: .rounded))
+                        .foregroundColor(.yellow)
+                    Text("LIVE")
+                        .font(.system(size: 7.5, weight: .black))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(Color.yellow))
+                }
+
+                Text("Score: \(engine.score) • \(engine.linesCleared) lines • ⏱ \(engine.formattedRunTime)")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.95))
+            }
+
+            Spacer()
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.yellow.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.yellow.opacity(0.45), lineWidth: 1)
+                )
+        )
+    }
+
     private var archetypeBanner: some View {
         let arch = analytics.archetype
         return HStack(spacing: 10) {
