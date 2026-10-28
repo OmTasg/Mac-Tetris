@@ -7,7 +7,7 @@ struct GameView: View {
         VStack(spacing: 0) {
             // Main Playing Area (Canvas + Header + Ceiling Line)
             ZStack(alignment: .top) {
-                // Background
+                // Pure Solid Black Background
                 Color.black
                     .ignoresSafeArea()
 
@@ -15,33 +15,16 @@ struct GameView: View {
                 Canvas { context, size in
                     let cell = GameConfig.cellSize
 
-                    // 1. Subtle Grid Outlines (clearly shows every row 4..<18)
-                    for r in GameConfig.deathLimitRow..<GameConfig.rows {
-                        for c in 0..<GameConfig.columns {
-                            let rect = CGRect(
-                                x: Double(c) * cell,
-                                y: Double(r) * cell,
-                                width: cell,
-                                height: cell
-                            )
-                            context.stroke(
-                                Path(rect),
-                                with: .color(Color.white.opacity(0.04)),
-                                lineWidth: 0.5
-                            )
-                        }
-                    }
-
-                    // 2. Settled Arena Blocks (Row 17 sits cleanly on the floor)
+                    // 1. Settled Arena Blocks (100% Solid Flat Colors, No Lines or Gaps)
                     for y in 0..<GameConfig.rows {
                         for x in 0..<GameConfig.columns {
                             let val = engine.arena[y][x]
                             if val > 0 {
                                 let rect = CGRect(
-                                    x: Double(x) * cell + 0.5,
-                                    y: Double(y) * cell + 0.5,
-                                    width: cell - 1.0,
-                                    height: cell - 1.0
+                                    x: Double(x) * cell,
+                                    y: Double(y) * cell,
+                                    width: cell,
+                                    height: cell
                                 )
 
                                 context.fill(
@@ -52,17 +35,17 @@ struct GameView: View {
                         }
                     }
 
-                    // 3. Active Falling Tetromino (Strict Grid Placement)
+                    // 2. Active Falling Tetromino (100% Solid Flat Colors, No Lines or Gaps)
                     if !engine.isDead {
                         let shape = engine.currentShape
                         for r in 0..<shape.count {
                             for c in 0..<shape[r].count {
                                 if shape[r][c] != 0 {
                                     let rect = CGRect(
-                                        x: Double(engine.gridX + c) * cell + 0.5,
-                                        y: Double(engine.gridY + r) * cell + 0.5,
-                                        width: cell - 1.0,
-                                        height: cell - 1.0
+                                        x: Double(engine.gridX + c) * cell,
+                                        y: Double(engine.gridY + r) * cell,
+                                        width: cell,
+                                        height: cell
                                     )
                                     context.fill(
                                         Path(rect),

@@ -27,6 +27,9 @@ final class GameEngine: ObservableObject {
     // Discrete gravity & lock timers
     private var gravityCounter: Int = 0
     private var lockTimer: Int = 0
+    private var lockResets: Int = 0
+    private let maxLockResets: Int = 15
+    private let standardLockDelay: Int = 30 // 30 frames = 0.5s lock delay
     private var isSoftDropping: Bool = false
 
     // Symmetrical, perfectly matched movement speeds (Horizontal & Vertical: 4 frames / cell)
@@ -36,7 +39,7 @@ final class GameEngine: ObservableObject {
     private var rightHoldTimer: Int = 0
     private let dasDelay: Int = 5   // ~80ms hold threshold
     private let arrSpeed: Int = 4   // 1 column every 4 frames = 15 cols/sec
-    private let softDropSpeed: Int = 4 // 1 row every 4 frames = 15 rows/sec (exact same speed!)
+    private let softDropSpeed: Int = 4 // 1 row every 4 frames = 15 rows/sec
     private let normalGravitySpeed: Int = 25
 
     private let bag = Bag()
@@ -81,6 +84,7 @@ final class GameEngine: ObservableObject {
         rightHoldTimer = 0
         gravityCounter = 0
         lockTimer = 0
+        lockResets = 0
 
         currentShapeIndex = bag.grabIndex()
         nextShapeIndex = bag.grabIndex()
@@ -112,6 +116,8 @@ final class GameEngine: ObservableObject {
 
         gravityCounter = 0
         lockTimer = 0
+        lockResets = 0
+        isSoftDropping = false // Do not carry over soft drop to fresh piece!
 
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY) {
             die()
@@ -134,10 +140,10 @@ final class GameEngine: ObservableObject {
     func tick() {
         guard !isPaused && !isDead else { return }
 
-        // 1. Smooth horizontal movement when holding keys (4 frames / step)
+        // 1. Smooth horizontal movement when holding keys
         handleHolding()
 
-        // 2. Discrete Gravity & Fall (Soft drop matches horizontal speed: 4 frames / step)
+        // 2. Discrete Gravity & Fall
         let canFall = canPlace(shape: currentShape, atX: gridX, atY: gridY + 1)
 
         if canFall {
@@ -155,11 +161,24 @@ final class GameEngine: ObservableObject {
         } else {
             // Block resting on floor or on top of another block
             lockTimer += 1
-            if lockTimer >= 22 || (isSoftDropping && lockTimer >= 6) {
+            let lockThreshold = isSoftDropping ? 16 : standardLockDelay // At least ~0.3s even with soft drop, 0.5s normal
+
+            if lockTimer >= lockThreshold {
                 mergeCurrentPiece()
                 score += 10
                 lockTimer = 0
                 gravityCounter = 0
+                lockResets = 0
+            }
+        }
+    }
+
+    // Reset lock delay on successful movement or rotation (Standard Tetris Lock Delay)
+    private func onPieceMovedOrRotated() {
+        if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
+            if lockResets < maxLockResets {
+                lockTimer = 0
+                lockResets += 1
             }
         }
     }
@@ -205,6 +224,7 @@ final class GameEngine: ObservableObject {
         guard !isDead && !isPaused else { return }
         if canPlace(shape: currentShape, atX: gridX - 1, atY: gridY) {
             gridX -= 1
+            onPieceMovedOrRotated()
         }
     }
 
@@ -212,6 +232,7 @@ final class GameEngine: ObservableObject {
         guard !isDead && !isPaused else { return }
         if canPlace(shape: currentShape, atX: gridX + 1, atY: gridY) {
             gridX += 1
+            onPieceMovedOrRotated()
         }
     }
 
@@ -254,6 +275,7 @@ final class GameEngine: ObservableObject {
                 gridX = testX
                 currentRotation = nextRot
                 currentShape = testShape
+                onPieceMovedOrRotated()
                 return
             }
         }
@@ -298,7 +320,7 @@ final class GameEngine: ObservableObject {
         return true
     }
 
-    // MARK: - Merging & Immediate Line Clearing (No Animation)
+    // MARK: - Merging & Immediate Line Clearing
     private func mergeCurrentPiece() {
         guard let pieceType = TetrominoType(rawValue: currentShapeIndex) else { return }
         let colorIdx = pieceType.colorIndex
