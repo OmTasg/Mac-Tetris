@@ -15,7 +15,7 @@ struct GameView: View {
                 Canvas { context, size in
                     let cell = GameConfig.cellSize
 
-                    // 1. Subtle Grid Outlines (clearly shows every single row 4..<18)
+                    // 1. Subtle Grid Outlines (clearly shows every row 4..<18)
                     for r in GameConfig.deathLimitRow..<GameConfig.rows {
                         for c in 0..<GameConfig.columns {
                             let rect = CGRect(
@@ -32,19 +32,14 @@ struct GameView: View {
                         }
                     }
 
-                    // 2. Settled Arena Blocks (Row 17 sits right on the floor above footer)
+                    // 2. Settled Arena Blocks (Row 17 sits cleanly on the floor)
                     for y in 0..<GameConfig.rows {
                         for x in 0..<GameConfig.columns {
                             let val = engine.arena[y][x]
                             if val > 0 {
-                                var yOffset = 0.0
-                                if let breakRow = engine.lineClearBreakRow, y < breakRow {
-                                    yOffset = engine.lineClearOffset
-                                }
-
                                 let rect = CGRect(
                                     x: Double(x) * cell + 0.5,
-                                    y: Double(y) * cell + yOffset + 0.5,
+                                    y: Double(y) * cell + 0.5,
                                     width: cell - 1.0,
                                     height: cell - 1.0
                                 )
@@ -129,7 +124,7 @@ struct GameView: View {
                     .padding(.horizontal, 14)
                     .padding(.top, 10)
 
-                    // Giant Score Display (Exact Stacker visual)
+                    // Giant Score Display
                     Text("\(engine.score)")
                         .font(.system(size: 44, weight: .bold, design: .default))
                         .foregroundColor(.white)
@@ -215,7 +210,7 @@ struct GameView: View {
             }
             .frame(width: GameConfig.gameWidth, height: GameConfig.gameHeight)
 
-            // Minimal Footer (Placed below canvas, NEVER overlapping Row 17!)
+            // Minimal Footer (Below canvas, never overlapping Row 17)
             HStack {
                 Button(action: {
                     engine.showHistory = true

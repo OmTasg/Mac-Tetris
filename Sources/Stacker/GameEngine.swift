@@ -5,7 +5,7 @@ import Combine
 final class GameEngine: ObservableObject {
     @Published var arena: [[Int]]
     @Published var gridX: Int = 3
-    @Published var gridY: Int = 1
+    @Published var gridY: Int = 2
     @Published var currentShape: [[Int]] = []
     @Published var currentShapeIndex: Int = 0
     @Published var currentRotation: Int = 0
@@ -24,23 +24,18 @@ final class GameEngine: ObservableObject {
     @Published var isPaused: Bool = false
     @Published var showHistory: Bool = false
 
-    // Smooth line clear collapse animation
-    @Published var lineClearOffset: Double = 0
-    @Published var lineClearBreakRow: Int? = nil
-    private var lineClearYV: Double = 0
-
     // Discrete gravity & lock timers
     private var gravityCounter: Int = 0
     private var lockTimer: Int = 0
     private var isSoftDropping: Bool = false
 
-    // Smooth DAS (Delayed Auto Shift) & ARR (Auto Repeat Rate)
+    // Fast, responsive DAS (Delayed Auto Shift) & ARR (Auto Repeat Rate)
     private var isLeftHeld: Bool = false
     private var isRightHeld: Bool = false
     private var leftHoldTimer: Int = 0
     private var rightHoldTimer: Int = 0
-    private let dasDelay: Int = 6   // ~100ms quick grace period (no jarring lag)
-    private let arrSpeed: Int = 4   // smooth, steady glide every 4 frames (15 cols/sec)
+    private let dasDelay: Int = 4   // ~66ms quick transition into hold
+    private let arrSpeed: Int = 2   // smooth, fast glide every 2 frames (30 cols/sec)
 
     private let bag = Bag()
     private var timer: Timer?
@@ -84,9 +79,6 @@ final class GameEngine: ObservableObject {
         rightHoldTimer = 0
         gravityCounter = 0
         lockTimer = 0
-        lineClearOffset = 0
-        lineClearBreakRow = nil
-        lineClearYV = 0
 
         currentShapeIndex = bag.grabIndex()
         nextShapeIndex = bag.grabIndex()
@@ -98,12 +90,22 @@ final class GameEngine: ObservableObject {
     private func spawnPiece(shapeIndex: Int) {
         guard let pieceType = TetrominoType(rawValue: shapeIndex) else { return }
         currentShapeIndex = shapeIndex
-        currentRotation = 0
+        currentRotation = 0 // Always default rotation 0
         currentShape = pieceType.allRotationStates[0]
 
-        let shapeWidth = currentShape[0].count
-        gridX = (GameConfig.columns - shapeWidth) / 2
-        gridY = 1
+        // Default canonical spawn position (centered horizontally in top area)
+        switch pieceType {
+        case .o:
+            gridX = 4
+            gridY = 2
+        case .i:
+            gridX = 3
+            gridY = 1
+        default:
+            gridX = 3
+            gridY = 2
+        }
+
         gravityCounter = 0
         lockTimer = 0
 
@@ -128,25 +130,15 @@ final class GameEngine: ObservableObject {
     func tick() {
         guard !isPaused && !isDead else { return }
 
-        // 1. Handle Smooth Held Left / Right Movement
+        // 1. Fast, smooth horizontal movement when holding keys
         handleHolding()
 
-        // 2. Line clear smooth collapse
-        if lineClearOffset < 0 {
-            lineClearOffset = min(0, lineClearOffset + lineClearYV)
-            if lineClearOffset == 0 {
-                lineClearBreakRow = nil
-                lineClearYV = 0
-            }
-        }
-
-        // 3. Discrete Gravity & Fall
+        // 2. Discrete Gravity & Fall
         let canFall = canPlace(shape: currentShape, atX: gridX, atY: gridY + 1)
 
         if canFall {
             lockTimer = 0
             gravityCounter += 1
-            // Controlled soft drop: 5 frames (~12 rows/sec); normal: 25 frames (~2.4 rows/sec)
             let dropInterval = isSoftDropping ? 5 : 25
 
             if gravityCounter >= dropInterval {
@@ -157,9 +149,9 @@ final class GameEngine: ObservableObject {
                 }
             }
         } else {
-            // Block is resting on the ground or on top of another block
+            // Block resting on floor or on top of another block
             lockTimer += 1
-            if lockTimer >= 25 || (isSoftDropping && lockTimer >= 8) {
+            if lockTimer >= 22 || (isSoftDropping && lockTimer >= 6) {
                 mergeCurrentPiece()
                 score += 10
                 lockTimer = 0
@@ -185,7 +177,7 @@ final class GameEngine: ObservableObject {
 
     func setLeftHeld(_ held: Bool) {
         if held && !isLeftHeld {
-            moveLeft() // Immediate response on initial tap
+            moveLeft()
             leftHoldTimer = 0
         }
         isLeftHeld = held
@@ -196,7 +188,7 @@ final class GameEngine: ObservableObject {
 
     func setRightHeld(_ held: Bool) {
         if held && !isRightHeld {
-            moveRight() // Immediate response on initial tap
+            moveRight()
             rightHoldTimer = 0
         }
         isRightHeld = held
@@ -287,17 +279,12 @@ final class GameEngine: ObservableObject {
                     let col = testX + c
                     let row = testY + r
 
-                    // MUST be strictly within 0..<10
                     if col < 0 || col >= GameConfig.columns {
                         return false
                     }
-
-                    // MUST be strictly < 18
                     if row >= GameConfig.rows {
                         return false
                     }
-
-                    // MUST NOT collide with placed blocks
                     if row >= 0 && arena[row][col] != 0 {
                         return false
                     }
@@ -307,7 +294,7 @@ final class GameEngine: ObservableObject {
         return true
     }
 
-    // MARK: - Merging & Line Clearing
+    // MARK: - Merging & Immediate Line Clearing (No Animation)
     private func mergeCurrentPiece() {
         guard let pieceType = TetrominoType(rawValue: currentShapeIndex) else { return }
         let colorIdx = pieceType.colorIndex
@@ -339,7 +326,7 @@ final class GameEngine: ObservableObject {
             return
         }
 
-        // Clear completed lines using Stacker's exact formula
+        // Immediately clear completed lines (No delay or animation)
         var cleared = 0
         var lineClearScore = 0.0
 
@@ -351,14 +338,6 @@ final class GameEngine: ObservableObject {
                 lineClearScore = (lineClearScore * 1.5) + 75.0
                 cleared += 1
                 linesCleared += 1
-
-                lineClearOffset -= GameConfig.cellSize
-                lineClearBreakRow = r + 1
-                if lineClearYV == 0 {
-                    lineClearYV += 2.0
-                } else {
-                    lineClearYV += 1.0
-                }
             }
         }
 
@@ -366,7 +345,7 @@ final class GameEngine: ObservableObject {
             score += Int(round(lineClearScore))
         }
 
-        // Spawn next piece
+        // Spawn next piece always in default rotation and position
         currentShapeIndex = nextShapeIndex
         nextShapeIndex = bag.grabIndex()
         spawnPiece(shapeIndex: currentShapeIndex)
