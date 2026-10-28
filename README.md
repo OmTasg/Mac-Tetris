@@ -42,9 +42,11 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
   - Remembers the exact board matrix, current falling piece position, current rotation, upcoming piece, score, and high score.
   - Reopens in paused state so you never lose a block unexpectedly.
 
-- **Local High Score History**:
+- **Local High Score History & Active Play Time Tracking**:
   - Saved locally to `~/Library/Application Support/Stacker/scores.json`.
-  - Click on **"High score: ..."** or **"🏆 Scores"** to view the Top 50 leaderboard with dates and lines cleared.
+  - Tracks **Total Active Play Time** across the app and **Per-Run Duration** for each game run.
+  - Time tracking **only counts active gameplay** (strictly freezes while paused, dead, or when the window loses focus).
+  - Click on **"High score: ..."** or **"🏆 Scores"** to view the leaderboard with scores, lines cleared, duration, and dates.
 
 ---
 

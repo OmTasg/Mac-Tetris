@@ -20,9 +20,18 @@ final class GameEngine: ObservableObject {
     }
     @Published var highscore: Int = 0
     @Published var linesCleared: Int = 0
+    @Published var currentRunTime: Double = 0 // Active play time in seconds for this run
     @Published var isDead: Bool = false
     @Published var isPaused: Bool = false
-    @Published var showHistory: Bool = false
+    @Published var showHistory: Bool = false {
+        didSet {
+            if showHistory && !isDead && !isPaused {
+                autoPause()
+            }
+        }
+    }
+
+    private var totalPlayTimeAccumulator: Double = 0
 
     // Discrete gravity & lock timers
     private var gravityCounter: Int = 0
@@ -62,6 +71,7 @@ final class GameEngine: ObservableObject {
             self.score = saved.score
             self.highscore = max(saved.highscore, ScoreHistoryManager.shared.highestScore)
             self.linesCleared = saved.linesCleared
+            self.currentRunTime = saved.currentRunTime
             self.isDead = false
             self.isPaused = true
         } else {
@@ -72,9 +82,11 @@ final class GameEngine: ObservableObject {
     }
 
     func startNewGame() {
+        flushActiveTime()
         arena = Array(repeating: Array(repeating: 0, count: GameConfig.columns), count: GameConfig.rows)
         score = 0
         linesCleared = 0
+        currentRunTime = 0
         isDead = false
         isPaused = false
         isSoftDropping = false
@@ -117,7 +129,7 @@ final class GameEngine: ObservableObject {
         gravityCounter = 0
         lockTimer = 0
         lockResets = 0
-        isSoftDropping = false // Do not carry over soft drop to fresh piece!
+        isSoftDropping = false
 
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY) {
             die()
@@ -140,6 +152,15 @@ final class GameEngine: ObservableObject {
     func tick() {
         guard !isPaused && !isDead else { return }
 
+        // ONLY counts when actively playing the game
+        let delta = 1.0 / 60.0
+        currentRunTime += delta
+        totalPlayTimeAccumulator += delta
+        if totalPlayTimeAccumulator >= 1.0 {
+            ScoreHistoryManager.shared.addPlayTime(totalPlayTimeAccumulator)
+            totalPlayTimeAccumulator = 0
+        }
+
         // 1. Smooth horizontal movement when holding keys
         handleHolding()
 
@@ -161,7 +182,7 @@ final class GameEngine: ObservableObject {
         } else {
             // Block resting on floor or on top of another block
             lockTimer += 1
-            let lockThreshold = isSoftDropping ? 16 : standardLockDelay // At least ~0.3s even with soft drop, 0.5s normal
+            let lockThreshold = isSoftDropping ? 16 : standardLockDelay
 
             if lockTimer >= lockThreshold {
                 mergeCurrentPiece()
@@ -173,7 +194,14 @@ final class GameEngine: ObservableObject {
         }
     }
 
-    // Reset lock delay on successful movement or rotation (Standard Tetris Lock Delay)
+    private func flushActiveTime() {
+        if totalPlayTimeAccumulator > 0 {
+            ScoreHistoryManager.shared.addPlayTime(totalPlayTimeAccumulator)
+            totalPlayTimeAccumulator = 0
+        }
+    }
+
+    // Reset lock delay on successful movement or rotation
     private func onPieceMovedOrRotated() {
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
             if lockResets < maxLockResets {
@@ -284,6 +312,7 @@ final class GameEngine: ObservableObject {
     // MARK: - Pause Controls
     func togglePause() {
         guard !isDead else { return }
+        flushActiveTime()
         isPaused.toggle()
         if isPaused {
             saveCurrentState()
@@ -292,6 +321,7 @@ final class GameEngine: ObservableObject {
 
     func autoPause() {
         if !isDead && !isPaused {
+            flushActiveTime()
             isPaused = true
             saveCurrentState()
         }
@@ -380,13 +410,15 @@ final class GameEngine: ObservableObject {
 
     private func die() {
         isDead = true
-        ScoreHistoryManager.shared.record(score: score, lines: linesCleared)
+        flushActiveTime()
+        ScoreHistoryManager.shared.record(score: score, lines: linesCleared, duration: currentRunTime)
         StateManager.shared.clearState()
     }
 
     // MARK: - State Persistence
     func saveCurrentState() {
         guard !isDead else { return }
+        flushActiveTime()
         let state = SavedGameState(
             arenaMatrix: arena,
             gridX: gridX,
@@ -398,6 +430,7 @@ final class GameEngine: ObservableObject {
             score: score,
             highscore: highscore,
             linesCleared: linesCleared,
+            currentRunTime: currentRunTime,
             isDead: isDead,
             isPaused: isPaused
         )
@@ -415,5 +448,9 @@ final class GameEngine: ObservableObject {
 
     var nextShapeMatrix: [[Int]] {
         TetrominoType(rawValue: nextShapeIndex)?.defaultMatrix ?? []
+    }
+
+    var formattedRunTime: String {
+        formatClockTime(currentRunTime)
     }
 }

@@ -127,7 +127,7 @@ struct GameView: View {
                         Text("Final Score: \(engine.score)")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.white)
-                        Text("Lines: \(engine.linesCleared)")
+                        Text("Lines: \(engine.linesCleared) • Time: \(engine.formattedRunTime)")
                             .font(.system(size: 13))
                             .foregroundColor(.gray)
 
@@ -206,9 +206,13 @@ struct GameView: View {
 
                 Spacer()
 
-                Text("Space: Drop/Play • P: Pause")
-                    .font(.system(size: 10))
-                    .foregroundColor(.gray.opacity(0.7))
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 9))
+                    Text(engine.formattedRunTime)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                }
+                .foregroundColor(.gray.opacity(0.85))
 
                 Spacer()
 
