@@ -78,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Floating Panel Setup
     private func setupPanel() {
         let width = GameConfig.gameWidth
-        let height = GameConfig.gameHeight
+        let height = GameConfig.totalHeight
         let rect = NSRect(x: 0, y: 0, width: width, height: height)
 
         panel = FloatingGamePanel(contentRect: rect)
@@ -128,7 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !isUserRepositioned, let button = statusItem.button, let screen = button.window?.screen {
             let buttonFrame = button.window?.convertToScreen(button.frame) ?? .zero
             let panelWidth = GameConfig.gameWidth
-            let panelHeight = GameConfig.gameHeight
+            let panelHeight = GameConfig.totalHeight
 
             var x = buttonFrame.midX - (panelWidth / 2)
             let y = buttonFrame.minY - panelHeight - 6
@@ -164,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.engine.setRightHeld(isDown)
                 return nil
 
-            // Down Arrow (125) / 'S' (1): Soft Drop
+            // Down Arrow (125) / 'S' (1): Soft Drop (smooth controlled fall)
             case 125, 1:
                 self.engine.setSoftDropping(isDown)
                 return nil
@@ -183,10 +183,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 return nil
 
-            // Spacebar (49): Hard Drop immediately to the bottom
+            // Spacebar (49): Hard drop while playing, or restart when dead!
             case 49:
                 if isDown {
-                    self.engine.hardDrop()
+                    if self.engine.isDead {
+                        self.engine.startNewGame()
+                    } else {
+                        self.engine.hardDrop()
+                    }
                 }
                 return nil
 
@@ -197,7 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 return nil
 
-            // 'R' (15): Restart
+            // 'R' (15): Restart game
             case 15:
                 if isDown {
                     self.engine.startNewGame()

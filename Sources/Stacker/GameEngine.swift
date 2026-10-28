@@ -34,13 +34,13 @@ final class GameEngine: ObservableObject {
     private var lockTimer: Int = 0
     private var isSoftDropping: Bool = false
 
-    // DAS (Delayed Auto Shift) & ARR (Auto Repeat Rate)
+    // Smooth DAS (Delayed Auto Shift) & ARR (Auto Repeat Rate)
     private var isLeftHeld: Bool = false
     private var isRightHeld: Bool = false
     private var leftHoldTimer: Int = 0
     private var rightHoldTimer: Int = 0
-    private let dasDelay: Int = 10  // ~160ms delay before repeat
-    private let arrSpeed: Int = 2   // repeat every 2 frames (~33ms)
+    private let dasDelay: Int = 6   // ~100ms quick grace period (no jarring lag)
+    private let arrSpeed: Int = 4   // smooth, steady glide every 4 frames (15 cols/sec)
 
     private let bag = Bag()
     private var timer: Timer?
@@ -63,7 +63,7 @@ final class GameEngine: ObservableObject {
             self.highscore = max(saved.highscore, ScoreHistoryManager.shared.highestScore)
             self.linesCleared = saved.linesCleared
             self.isDead = false
-            self.isPaused = true // Open paused so player can prepare
+            self.isPaused = true
         } else {
             startNewGame()
         }
@@ -107,7 +107,6 @@ final class GameEngine: ObservableObject {
         gravityCounter = 0
         lockTimer = 0
 
-        // If spawn position immediately collides, game over
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY) {
             die()
         }
@@ -129,7 +128,7 @@ final class GameEngine: ObservableObject {
     func tick() {
         guard !isPaused && !isDead else { return }
 
-        // 1. Handle Held Left / Right Movement (DAS / ARR)
+        // 1. Handle Smooth Held Left / Right Movement
         handleHolding()
 
         // 2. Line clear smooth collapse
@@ -147,8 +146,8 @@ final class GameEngine: ObservableObject {
         if canFall {
             lockTimer = 0
             gravityCounter += 1
-            // Soft drop falls every 2 frames (~30 rows/sec); normal gravity falls every 25 frames (~2.4 rows/sec)
-            let dropInterval = isSoftDropping ? 2 : 25
+            // Controlled soft drop: 5 frames (~12 rows/sec); normal: 25 frames (~2.4 rows/sec)
+            let dropInterval = isSoftDropping ? 5 : 25
 
             if gravityCounter >= dropInterval {
                 gravityCounter = 0
@@ -160,8 +159,7 @@ final class GameEngine: ObservableObject {
         } else {
             // Block is resting on the ground or on top of another block
             lockTimer += 1
-            // 25 frames lock delay (~0.4s), or instant if soft dropping
-            if lockTimer >= 25 || (isSoftDropping && lockTimer >= 5) {
+            if lockTimer >= 25 || (isSoftDropping && lockTimer >= 8) {
                 mergeCurrentPiece()
                 score += 10
                 lockTimer = 0
@@ -252,7 +250,6 @@ final class GameEngine: ObservableObject {
         let nextRot = (currentRotation + dir + 4) % 4
         let testShape = piece.allRotationStates[nextRot]
 
-        // Standard wall kicks to test: in-place (0), kick right (+1), kick left (-1), kick right (+2), kick left (-2)
         let kicks = [0, 1, -1, 2, -2, 3, -3]
 
         for offset in kicks {
@@ -355,7 +352,6 @@ final class GameEngine: ObservableObject {
                 cleared += 1
                 linesCleared += 1
 
-                // Visual collapse effect
                 lineClearOffset -= GameConfig.cellSize
                 lineClearBreakRow = r + 1
                 if lineClearYV == 0 {

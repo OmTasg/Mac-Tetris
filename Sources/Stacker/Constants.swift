@@ -216,11 +216,9 @@ struct GameConfig {
     static let cellSize: Double = 30.0 // 30 pt per cell (60px retina)
     static let gameWidth: Double = Double(columns) * cellSize // 300 pt
     static let gameHeight: Double = Double(rows) * cellSize  // 540 pt
+    static let footerHeight: Double = 28.0
+    static let totalHeight: Double = gameHeight + footerHeight // 568 pt
     static let redLineY: Double = Double(deathLimitRow) * cellSize // 120 pt
-
-    // Gravity / falling speeds (rows per tick at 60 FPS):
-    static let normalFallSpeed: Double = 0.035 // ~28 frames per row
-    static let softDropSpeed: Double = 0.35     // ~3 frames per row
 }
 
 extension Color {
