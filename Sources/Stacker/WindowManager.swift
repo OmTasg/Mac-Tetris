@@ -43,3 +43,4 @@ final class WindowManager: ObservableObject {
         paneOpacity = max(0.3, min(1.0, updated))
     }
 }
+
