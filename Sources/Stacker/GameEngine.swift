@@ -162,9 +162,10 @@ final class GameEngine: ObservableObject {
             gridY = 1
         }
 
-        gravityCounter = isSoftDropping ? (softDropSpeed - 1) : 0
+        gravityCounter = 0
         lockTimer = 0
         lockResets = 0
+        isSoftDropping = false
 
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY) {
             die()
@@ -270,6 +271,7 @@ final class GameEngine: ObservableObject {
         lockTimer = 0
         gravityCounter = 0
         lockResets = 0
+        isSoftDropping = false
     }
 
     private func flushActiveTime(persist: Bool = false) {
