@@ -49,11 +49,12 @@ final class GameEngine: ObservableObject {
     private var gravityCounter: Int = 0
     private var lockTimer: Int = 0
     private var lockResets: Int = 0
-    private let maxLockResets: Int = 15
-    private let standardLockDelay: Int = 27 // 27 frames = 450ms (matches original Stacker LOCK_DELAY)
+    private let maxLockResets: Int = 6
+    private let standardLockDelay: Int = 14 // ~233ms snappy grace period (well under 1 second)
+    private let softDropLockDelay: Int = 6  // ~100ms quick grace period when holding Down
     private var isSoftDropping: Bool = false
     private var spawnDelayTimer: Int = 0
-    private let spawnDelayFrames: Int = 5 // ~83ms golden-ratio spawn delay (5 frames at 60 FPS)
+    private let spawnDelayFrames: Int = 1   // Fast, snappy 1-frame (~16ms) spawn delay
     private var softDropScoreAccumulator: Double = 0
 
     // Symmetrical, perfectly matched movement speeds
@@ -255,10 +256,9 @@ final class GameEngine: ObservableObject {
             }
         } else {
             // Block resting on floor or on top of another block
-            // Always provide standard lock delay so the player can slide and rotate,
-            // exactly like what happens when you are not holding the down key!
             lockTimer += 1
-            if lockTimer >= standardLockDelay {
+            let threshold = isSoftDropping ? softDropLockDelay : standardLockDelay
+            if lockTimer >= threshold {
                 lockPiece()
             }
         }
