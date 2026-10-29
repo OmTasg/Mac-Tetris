@@ -52,7 +52,6 @@ final class GameEngine: ObservableObject {
     private let maxLockResets: Int = 15
     private let standardLockDelay: Int = 27 // 27 frames = 450ms (matches original Stacker LOCK_DELAY)
     private var isSoftDropping: Bool = false
-    private var hasMovedDown: Bool = false
     private var spawnDelayTimer: Int = 0
     private let spawnDelayFrames: Int = 5 // ~83ms golden-ratio spawn delay (5 frames at 60 FPS)
     private var softDropScoreAccumulator: Double = 0
@@ -166,7 +165,6 @@ final class GameEngine: ObservableObject {
         gravityCounter = isSoftDropping ? (softDropSpeed - 1) : 0
         lockTimer = 0
         lockResets = 0
-        hasMovedDown = false
 
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY) {
             die()
@@ -243,7 +241,6 @@ final class GameEngine: ObservableObject {
             if gravityCounter >= dropInterval {
                 gravityCounter = 0
                 gridY += 1
-                hasMovedDown = true
                 if isSoftDropping {
                     // +20% boost to soft drop (1.2 pts per row, integer-aligned via accumulator)
                     softDropScoreAccumulator += 1.2
@@ -257,17 +254,11 @@ final class GameEngine: ObservableObject {
             }
         } else {
             // Block resting on floor or on top of another block
-            if isSoftDropping && hasMovedDown {
-                // When actively soft-dropping down into the stack, lock immediately upon contact!
-                // Zero delay, zero pause!
+            // Always provide standard lock delay so the player can slide and rotate,
+            // exactly like what happens when you are not holding the down key!
+            lockTimer += 1
+            if lockTimer >= standardLockDelay {
                 lockPiece()
-            } else {
-                // Fresh spawn near ceiling (hasMovedDown == false) OR natural gravity:
-                // ALWAYS provide full lock delay so the player can slide and rotate away from the peak!
-                lockTimer += 1
-                if lockTimer >= standardLockDelay {
-                    lockPiece()
-                }
             }
         }
     }
@@ -355,10 +346,6 @@ final class GameEngine: ObservableObject {
 
     func setSoftDropping(_ active: Bool) {
         isSoftDropping = active
-        // Only lock immediately on press if the piece has already moved down from spawn and not spawning
-        if active && hasMovedDown && !isSpawning && !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
-            lockPiece()
-        }
     }
 
     // MARK: - Hard Drop (Spacebar)
@@ -378,7 +365,6 @@ final class GameEngine: ObservableObject {
         ScoreHistoryManager.shared.recordHardDrop(rows: rowsDropped)
 
         gridY = targetY
-        hasMovedDown = true
         lockPiece()
     }
 
