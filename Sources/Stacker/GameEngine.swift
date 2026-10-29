@@ -49,9 +49,9 @@ final class GameEngine: ObservableObject {
     private var gravityCounter: Int = 0
     private var lockTimer: Int = 0
     private var lockResets: Int = 0
-    private let maxLockResets: Int = 6
-    private let standardLockDelay: Int = 14 // ~233ms snappy grace period (well under 1 second)
-    private let softDropLockDelay: Int = 6  // ~100ms quick grace period when holding Down
+    private let maxLockResets: Int = 8
+    private let standardLockDelay: Int = 20 // ~333ms natural grace period (comfortable sweet spot, well under 1s)
+    private let softDropLockDelay: Int = 12 // ~200ms comfortable grace period when holding Down
     private var isSoftDropping: Bool = false
     private var spawnDelayTimer: Int = 0
     private let spawnDelayFrames: Int = 1   // Fast, snappy 1-frame (~16ms) spawn delay
@@ -166,7 +166,6 @@ final class GameEngine: ObservableObject {
         gravityCounter = 0
         lockTimer = 0
         lockResets = 0
-        isSoftDropping = false
 
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY) {
             die()
@@ -271,7 +270,6 @@ final class GameEngine: ObservableObject {
         lockTimer = 0
         gravityCounter = 0
         lockResets = 0
-        isSoftDropping = false
     }
 
     private func flushActiveTime(persist: Bool = false) {
@@ -406,6 +404,11 @@ final class GameEngine: ObservableObject {
     }
 
     func autoPause() {
+        isLeftHeld = false
+        isRightHeld = false
+        isSoftDropping = false
+        leftHoldTimer = 0
+        rightHoldTimer = 0
         if !isDead && !isPaused {
             flushActiveTime(persist: true)
             isPaused = true
