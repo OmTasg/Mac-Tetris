@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showContextMenu() {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Toggle Stacker", action: #selector(togglePanel), keyEquivalent: "t"))
-        menu.addItem(NSMenuItem(title: "Restart Game", action: #selector(restartGame), keyEquivalent: "r"))
+        menu.addItem(NSMenuItem(title: "Restart Game", action: #selector(restartGame), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Stacker", action: #selector(quitApp), keyEquivalent: "q"))
         statusItem.menu = menu
@@ -199,18 +199,22 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
 
             let isDown = event.type == .keyDown
 
-            // Command shortcuts: ⌘W closes window, ⌘Q quits app
-            if event.modifierFlags.contains(.command) && isDown {
-                switch event.charactersIgnoringModifiers?.lowercased() {
-                case "w":
-                    self.hidePanel()
-                    return nil
-                case "q":
-                    self.quitApp()
-                    return nil
-                default:
-                    break
+            // Command shortcuts: ⌘W closes window, ⌘Q quits app, ⌘R prevented from resetting score
+            if event.modifierFlags.contains(.command) {
+                if isDown {
+                    switch event.charactersIgnoringModifiers?.lowercased() {
+                    case "w":
+                        self.hidePanel()
+                    case "q":
+                        self.quitApp()
+                    case "r":
+                        // Explicitly ignore ⌘R so it does not reset the score or game
+                        break
+                    default:
+                        break
+                    }
                 }
+                return nil
             }
 
             switch event.keyCode {
@@ -263,9 +267,9 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
                 }
                 return nil
 
-            // 'R' (15): Restart game
+            // 'R' (15): Restart game only after dying (preserves active score during gameplay)
             case 15:
-                if isDown {
+                if isDown && self.engine.isDead {
                     self.engine.startNewGame()
                 }
                 return nil
