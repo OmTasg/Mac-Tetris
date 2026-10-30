@@ -307,9 +307,12 @@ final class GameEngine: ObservableObject {
     }
 
     func setLeftHeld(_ held: Bool) {
-        if held && !isLeftHeld {
-            moveLeft()
-            leftHoldTimer = 0
+        if held {
+            resumeIfPaused()
+            if !isLeftHeld {
+                moveLeft()
+                leftHoldTimer = 0
+            }
         }
         isLeftHeld = held
         if !held {
@@ -318,9 +321,12 @@ final class GameEngine: ObservableObject {
     }
 
     func setRightHeld(_ held: Bool) {
-        if held && !isRightHeld {
-            moveRight()
-            rightHoldTimer = 0
+        if held {
+            resumeIfPaused()
+            if !isRightHeld {
+                moveRight()
+                rightHoldTimer = 0
+            }
         }
         isRightHeld = held
         if !held {
@@ -329,6 +335,7 @@ final class GameEngine: ObservableObject {
     }
 
     func moveLeft() {
+        resumeIfPaused()
         guard !isDead && !isPaused && !isSpawning else { return }
         if canPlace(shape: currentShape, atX: gridX - 1, atY: gridY) {
             gridX -= 1
@@ -337,6 +344,7 @@ final class GameEngine: ObservableObject {
     }
 
     func moveRight() {
+        resumeIfPaused()
         guard !isDead && !isPaused && !isSpawning else { return }
         if canPlace(shape: currentShape, atX: gridX + 1, atY: gridY) {
             gridX += 1
@@ -345,6 +353,9 @@ final class GameEngine: ObservableObject {
     }
 
     func setSoftDropping(_ active: Bool) {
+        if active {
+            resumeIfPaused()
+        }
         isSoftDropping = active
     }
 
@@ -370,6 +381,7 @@ final class GameEngine: ObservableObject {
 
     // MARK: - Linear Rotation with Wall Kicks
     func rotate(dir: Int = 1) {
+        resumeIfPaused()
         guard !isDead && !isPaused && !isSpawning else { return }
         guard let piece = TetrominoType(rawValue: currentShapeIndex) else { return }
 
@@ -417,8 +429,14 @@ final class GameEngine: ObservableObject {
         }
     }
 
+    func resumeIfPaused() {
+        if isPaused && !isDead && !showHistory {
+            unpause()
+        }
+    }
+
     func unpause() {
-        guard !isDead && isPaused else { return }
+        guard !isDead && isPaused && !showHistory else { return }
         flushActiveTime(persist: true)
         isPaused = false
         startLoop()

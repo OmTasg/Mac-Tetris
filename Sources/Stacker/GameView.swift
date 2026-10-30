@@ -106,7 +106,7 @@ struct GameView: View {
                                     .stroke(Color.white.opacity(0.3), lineWidth: 1)
                             )
 
-                            Text("Click anywhere or Space to Resume")
+                            Text("Click anywhere, Move, or Space to Resume")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.white.opacity(0.85))
                                 .padding(.top, 6)

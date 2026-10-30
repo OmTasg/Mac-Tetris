@@ -75,7 +75,7 @@ A native macOS floating menu bar recreation of the popular browser puzzle game *
 | **Restart (After Dying)** | `Spacebar` | Click anywhere |
 | **Rotate Clockwise** | `Up Arrow` | `W` or `E` |
 | **Rotate Counter-Clockwise** | `Q` | — |
-| **Pause / Resume** | `P` | Click `❚❚` / `▶` |
+| **Pause / Resume** | `P` | Click `❚❚` / `▶`, or press any arrow / movement key / Space to resume |
 | **Opacity Down (See-through)** | `[` | `-` (Fine-tune by 5%) |
 | **Opacity Up (Solid)** | `]` | `+` / `=` (Fine-tune by 5%) |
 | **Close / Hide Popup** | `Escape` (Global) / `⌘W` | Click `✕` button on header or click Menu Bar icon |

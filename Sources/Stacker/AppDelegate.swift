@@ -249,7 +249,7 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
                     if self.engine.isDead {
                         self.engine.startNewGame()
                     } else if self.engine.isPaused {
-                        self.engine.togglePause()
+                        self.engine.unpause()
                     } else {
                         self.engine.hardDrop()
                     }
