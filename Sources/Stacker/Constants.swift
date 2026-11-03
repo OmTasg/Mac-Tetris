@@ -213,7 +213,7 @@ enum TetrominoType: Int, CaseIterable {
 struct GameConfig {
     static let columns: Int = 10
     static let rows: Int = 18
-    static let deathLimitRow: Int = 4 // Rows 0..<4 are above the red limit line
+    static let deathLimitRow: Int = 3 // Rows 0..<3 are above the red limit line (15 playable rows, matches Chrome extension!)
 
     // Logical dimensions for popup window on macOS:
     static let cellSize: Double = 30.0 // 30 pt per cell (60px retina)
@@ -221,7 +221,7 @@ struct GameConfig {
     static let gameHeight: Double = Double(rows) * cellSize  // 540 pt
     static let footerHeight: Double = 28.0
     static let totalHeight: Double = gameHeight + footerHeight // 568 pt
-    static let redLineY: Double = Double(deathLimitRow) * cellSize // 120 pt
+    static let redLineY: Double = Double(deathLimitRow) * cellSize // 90 pt (3 * 30pt)
 }
 
 extension Color {

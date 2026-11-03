@@ -49,9 +49,9 @@ final class GameEngine: ObservableObject {
     private var gravityCounter: Int = 0
     private var lockTimer: Int = 0
     private var lockResets: Int = 0
-    private let maxLockResets: Int = 8
-    private let standardLockDelay: Int = 20 // ~333ms natural grace period (comfortable sweet spot, well under 1s)
-    private let softDropLockDelay: Int = 12 // ~200ms comfortable grace period when holding Down
+    private let maxLockResets: Int = 15
+    private let standardLockDelay: Int = 27 // ~450ms natural grace period (matches original LOCK_DELAY: 450)
+    private let softDropLockDelay: Int = 15 // ~250ms comfortable grace period when holding Down
     private var isSoftDropping: Bool = false
     private var spawnDelayTimer: Int = 0
     private let spawnDelayFrames: Int = 1   // Fast, snappy 1-frame (~16ms) spawn delay
@@ -103,7 +103,7 @@ final class GameEngine: ObservableObject {
     }
 
     func updateDangerZoneStatus() {
-        for r in 0...6 {
+        for r in 0...5 {
             if arena[r].contains(where: { $0 > 0 }) {
                 isStackInDangerZone = true
                 return
@@ -134,8 +134,8 @@ final class GameEngine: ObservableObject {
         isSpawning = false
         softDropScoreAccumulator = 0
 
-        currentShapeIndex = bag.grabIndex()
-        nextShapeIndex = bag.grabIndex()
+        currentShapeIndex = bag.grabIndex(inDangerZone: isStackInDangerZone)
+        nextShapeIndex = bag.grabIndex(inDangerZone: isStackInDangerZone)
 
         spawnPiece(shapeIndex: currentShapeIndex)
         saveCurrentState()
@@ -256,7 +256,10 @@ final class GameEngine: ObservableObject {
         } else {
             // Block resting on floor or on top of another block
             lockTimer += 1
-            let threshold = isSoftDropping ? softDropLockDelay : standardLockDelay
+            var threshold = isSoftDropping ? softDropLockDelay : standardLockDelay
+            if isStackInDangerZone && !isSoftDropping {
+                threshold += 4 // ~66ms clutch grace in danger zone
+            }
             if lockTimer >= threshold {
                 lockPiece()
             }
@@ -379,7 +382,7 @@ final class GameEngine: ObservableObject {
         lockPiece()
     }
 
-    // MARK: - Linear Rotation with Wall Kicks
+    // MARK: - Linear Rotation with Wall Kicks & Floor Kicks
     func rotate(dir: Int = 1) {
         resumeIfPaused()
         guard !isDead && !isPaused && !isSpawning else { return }
@@ -388,12 +391,29 @@ final class GameEngine: ObservableObject {
         let nextRot = (currentRotation + dir + 4) % 4
         let testShape = piece.allRotationStates[nextRot]
 
-        let kicks = [0, 1, -1, 2, -2, 3, -3]
+        // Wall and floor kick offsets (dx, dy):
+        // 1. In place: (0, 0)
+        // 2. Lateral kicks: (±1, 0), (±2, 0)
+        // 3. Upward floor kick: (0, -1) (lift up 1 row if touching floor or stack)
+        // 4. Diagonal kicks: (±1, -1)
+        // 5. Deep vertical kick: (0, -2) (essential for I-bar floor rotation)
+        // 6. Wide horizontal kicks: (±3, 0)
+        let kicks: [(dx: Int, dy: Int)] = [
+            (0, 0),
+            (1, 0), (-1, 0),
+            (0, -1),
+            (2, 0), (-2, 0),
+            (1, -1), (-1, -1),
+            (0, -2),
+            (3, 0), (-3, 0)
+        ]
 
-        for offset in kicks {
-            let testX = gridX + offset
-            if canPlace(shape: testShape, atX: testX, atY: gridY) {
+        for kick in kicks {
+            let testX = gridX + kick.dx
+            let testY = gridY + kick.dy
+            if canPlace(shape: testShape, atX: testX, atY: testY) {
                 gridX = testX
+                gridY = testY
                 currentRotation = nextRot
                 currentShape = testShape
                 onPieceMovedOrRotated()
@@ -523,7 +543,7 @@ final class GameEngine: ObservableObject {
         updateDangerZoneStatus()
 
         currentShapeIndex = nextShapeIndex
-        nextShapeIndex = bag.grabIndex()
+        nextShapeIndex = bag.grabIndex(inDangerZone: isStackInDangerZone)
         isSpawning = true
         spawnDelayTimer = spawnDelayFrames // Tiny spawn delay (5 frames = ~83ms)
 
