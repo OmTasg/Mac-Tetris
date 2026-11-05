@@ -151,25 +151,26 @@ final class GameEngine: ObservableObject {
         switch pieceType {
         case .o:
             gridX = 4
-            gridY = 1
+            gridY = 0
         case .i:
             gridX = 3
             gridY = 0
         case .l, .j:
             gridX = 3
-            gridY = 1
+            gridY = 0
         default:
             gridX = 3
-            gridY = 1
+            gridY = 0
+        }
+
+        // Ensure newly spawned piece sits cleanly above any blocks in row 3
+        while !canPlace(shape: currentShape, atX: gridX, atY: gridY) && gridY > -3 {
+            gridY -= 1
         }
 
         gravityCounter = 0
         lockTimer = 0
         lockResets = 0
-
-        if !canPlace(shape: currentShape, atX: gridX, atY: gridY) {
-            die()
-        }
     }
 
     func startLoop() {
@@ -505,21 +506,7 @@ final class GameEngine: ObservableObject {
 
         ScoreHistoryManager.shared.recordPiecePlaced(shapeIndex: currentShapeIndex)
 
-        // Check death condition: any settled block in rows 0..<4
-        var hitCeiling = false
-        for r in 0..<GameConfig.deathLimitRow {
-            if arena[r].contains(where: { $0 > 0 }) {
-                hitCeiling = true
-                break
-            }
-        }
-
-        if hitCeiling {
-            die()
-            return
-        }
-
-        // Immediately clear completed lines
+        // 1. Immediately clear completed lines FIRST so clutch clears pull blocks downward
         var cleared = 0
         var lineClearScore = 0.0
 
@@ -538,6 +525,20 @@ final class GameEngine: ObservableObject {
         if cleared > 0 {
             score += Int(round(lineClearScore))
             ScoreHistoryManager.shared.recordLineClears(count: cleared)
+        }
+
+        // 2. Check death condition: ONLY end game if settled blocks remain strictly ABOVE the red line (rows 0..<3)
+        var hitCeiling = false
+        for r in 0..<GameConfig.deathLimitRow {
+            if arena[r].contains(where: { $0 > 0 }) {
+                hitCeiling = true
+                break
+            }
+        }
+
+        if hitCeiling {
+            die()
+            return
         }
 
         updateDangerZoneStatus()
