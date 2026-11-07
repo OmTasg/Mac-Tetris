@@ -3,6 +3,7 @@ import SwiftUI
 struct GameView: View {
     @ObservedObject var engine: GameEngine
     @ObservedObject private var windowManager = WindowManager.shared
+    @ObservedObject private var lockManager = StudyLockManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -216,12 +217,18 @@ struct GameView: View {
                     ScoreHistoryView(engine: engine)
                         .transition(.opacity)
                 }
+
+                // Active Study Lock Full Overlay
+                if lockManager.isLocked || lockManager.sessionJustFinished {
+                    StudyLockOverlayView(engine: engine)
+                        .transition(.opacity)
+                }
             }
             .frame(width: GameConfig.gameWidth, height: GameConfig.gameHeight)
 
             // Minimal Footer (Below canvas, never overlapping Row 17)
             HStack {
-                HStack(spacing: 8) {
+                HStack(spacing: 7) {
                     Button(action: {
                         engine.activeModalTab = .leaderboard
                         engine.showHistory = true
@@ -241,6 +248,27 @@ struct GameView: View {
                             .foregroundColor(.gray)
                     }
                     .buttonStyle(.plain)
+
+                    Button(action: {
+                        engine.activeModalTab = .focusLock
+                        engine.showHistory = true
+                    }) {
+                        if lockManager.isLocked {
+                            HStack(spacing: 2) {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 8))
+                                Text(lockManager.formattedRemainingTime)
+                                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            }
+                            .foregroundColor(.yellow)
+                        } else {
+                            Text("🔒 Lock")
+                                .font(.system(size: 10))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .help(lockManager.isLocked ? "Study Lock Active" : "Set Study Lock (Focus Timer)")
                 }
 
                 Spacer()

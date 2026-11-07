@@ -5,6 +5,7 @@ import Combine
 enum ModalSheetTab: String, CaseIterable {
     case leaderboard = "Leaderboard"
     case analytics = "Analytics"
+    case focusLock = "Study Lock"
 }
 
 final class GameEngine: ObservableObject {
@@ -113,6 +114,7 @@ final class GameEngine: ObservableObject {
     }
 
     func startNewGame() {
+        guard !StudyLockManager.shared.isLocked else { return }
         flushActiveTime(persist: true)
         arena = Array(repeating: Array(repeating: 0, count: GameConfig.columns), count: GameConfig.rows)
         score = 0
@@ -451,13 +453,13 @@ final class GameEngine: ObservableObject {
     }
 
     func resumeIfPaused() {
-        if isPaused && !isDead && !showHistory {
+        if isPaused && !isDead && !showHistory && !StudyLockManager.shared.isLocked {
             unpause()
         }
     }
 
     func unpause() {
-        guard !isDead && isPaused && !showHistory else { return }
+        guard !isDead && isPaused && !showHistory && !StudyLockManager.shared.isLocked else { return }
         flushActiveTime(persist: true)
         isPaused = false
         startLoop()

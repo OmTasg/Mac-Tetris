@@ -18,6 +18,7 @@ struct ScoreHistoryView: View {
                 HStack(spacing: 3) {
                     tabButton(title: "Scores", icon: "trophy.fill", tab: .leaderboard)
                     tabButton(title: "Stats", icon: "chart.bar.xaxis", tab: .analytics)
+                    tabButton(title: "Lock", icon: "lock.fill", tab: .focusLock)
 
                     Spacer()
 
@@ -42,6 +43,8 @@ struct ScoreHistoryView: View {
                     leaderboardContent
                 case .analytics:
                     AnalyticsDashboardView(analytics: history.analytics, engine: engine)
+                case .focusLock:
+                    StudyLockSetupView(engine: engine)
                 }
 
                 Divider()

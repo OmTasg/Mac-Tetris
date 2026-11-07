@@ -56,13 +56,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showContextMenu() {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Toggle Stacker", action: #selector(togglePanel), keyEquivalent: "t"))
-        menu.addItem(NSMenuItem(title: "Restart Game", action: #selector(restartGame), keyEquivalent: ""))
+
+        if StudyLockManager.shared.isLocked {
+            let lockItem = NSMenuItem(title: "🔒 Study Lock: \(StudyLockManager.shared.formattedRemainingTime)", action: nil, keyEquivalent: "")
+            lockItem.isEnabled = false
+            menu.addItem(lockItem)
+        } else {
+            menu.addItem(NSMenuItem(title: "🔒 Study Lock...", action: #selector(openStudyLock), keyEquivalent: "l"))
+            menu.addItem(NSMenuItem(title: "Restart Game", action: #selector(restartGame), keyEquivalent: ""))
+        }
+
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit Stacker", action: #selector(quitApp), keyEquivalent: "q"))
         statusItem.menu = menu
         statusItem.button?.performClick(nil)
         DispatchQueue.main.async {
             self.statusItem.menu = nil
+        }
+    }
+
+    @objc private func openStudyLock() {
+        engine.activeModalTab = .focusLock
+        engine.showHistory = true
+        if !panel.isVisible {
+            showPanel()
         }
     }
 
@@ -175,7 +192,7 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        if !engine.isPaused && !engine.isDead {
+        if !engine.isPaused && !engine.isDead && !StudyLockManager.shared.isLocked {
             engine.startLoop()
         }
         setupGlobalMonitors()
@@ -213,6 +230,14 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
                     default:
                         break
                     }
+                }
+                return nil
+            }
+
+            // If study lock is active, ignore all game inputs! Allow only Escape (53) to hide window
+            if StudyLockManager.shared.isLocked {
+                if event.keyCode == 53 && isDown {
+                    self.hidePanel()
                 }
                 return nil
             }
