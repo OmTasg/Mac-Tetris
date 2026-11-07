@@ -226,101 +226,143 @@ struct GameView: View {
             }
             .frame(width: GameConfig.gameWidth, height: GameConfig.gameHeight)
 
-            // Minimal Footer (Below canvas, never overlapping Row 17)
-            HStack {
-                HStack(spacing: 7) {
-                    Button(action: {
-                        engine.activeModalTab = .leaderboard
-                        engine.showHistory = true
-                    }) {
-                        Text("🏆 Scores")
-                            .font(.system(size: 10))
-                            .foregroundColor(.gray)
-                    }
-                    .buttonStyle(.plain)
+            // Sleek Modern Footer Bar
+            VStack(spacing: 0) {
+                // Subtle 1px hairline border separating arena from footer
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: 1)
 
-                    Button(action: {
-                        engine.activeModalTab = .analytics
-                        engine.showHistory = true
-                    }) {
-                        Text("📊 Stats")
-                            .font(.system(size: 10))
-                            .foregroundColor(.gray)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(action: {
-                        engine.activeModalTab = .focusLock
-                        engine.showHistory = true
-                    }) {
-                        if lockManager.isLocked {
-                            HStack(spacing: 2) {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 8))
-                                Text(lockManager.formattedRemainingTime)
-                                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                HStack(alignment: .center) {
+                    // Left: Navigation Capsule (Scores, Stats, Study Lock)
+                    if lockManager.isLocked {
+                        HStack(spacing: 5) {
+                            // Compact 2-item capsule for Scores & Stats
+                            HStack(spacing: 0) {
+                                footerIconButton(icon: "trophy.fill", helpText: "High Scores") {
+                                    engine.activeModalTab = .leaderboard
+                                    engine.showHistory = true
+                                }
+                                capsuleDivider
+                                footerIconButton(icon: "chart.bar.xaxis", helpText: "Game Stats") {
+                                    engine.activeModalTab = .analytics
+                                    engine.showHistory = true
+                                }
                             }
-                            .foregroundColor(.yellow)
-                        } else {
-                            Text("🔒 Lock")
-                                .font(.system(size: 10))
-                                .foregroundColor(.gray)
+                            .background(Color.white.opacity(0.07))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+
+                            // Glowing Amber Lock Countdown Pill
+                            Button(action: {
+                                engine.activeModalTab = .focusLock
+                                engine.showHistory = true
+                            }) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 8))
+                                    Text(lockManager.formattedRemainingTime)
+                                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                }
+                                .foregroundColor(.yellow)
+                                .padding(.horizontal, 6)
+                                .frame(height: 20)
+                                .background(Color.yellow.opacity(0.15))
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.yellow.opacity(0.4), lineWidth: 0.5))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Study Lock Active - Click to view")
                         }
+                    } else {
+                        // Standard 3-item segmented capsule
+                        HStack(spacing: 0) {
+                            footerIconButton(icon: "trophy.fill", helpText: "High Scores") {
+                                engine.activeModalTab = .leaderboard
+                                engine.showHistory = true
+                            }
+                            capsuleDivider
+                            footerIconButton(icon: "chart.bar.xaxis", helpText: "Game Stats") {
+                                engine.activeModalTab = .analytics
+                                engine.showHistory = true
+                            }
+                            capsuleDivider
+                            footerIconButton(icon: "lock.fill", helpText: "Study Lock") {
+                                engine.activeModalTab = .focusLock
+                                engine.showHistory = true
+                            }
+                        }
+                        .background(Color.white.opacity(0.07))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
                     }
-                    .buttonStyle(.plain)
-                    .help(lockManager.isLocked ? "Study Lock Active" : "Set Study Lock (Focus Timer)")
-                }
 
-                Spacer()
+                    Spacer()
 
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.system(size: 9))
-                    Text(engine.formattedRunTime)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                }
-                .foregroundColor(.gray.opacity(0.85))
+                    // Center: Monospaced Run Timer
+                    HStack(spacing: 4) {
+                        Image(systemName: "stopwatch")
+                            .font(.system(size: 9.5))
+                            .foregroundColor(.white.opacity(0.4))
+                        Text(engine.formattedRunTime)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                    .help("Session Duration")
 
-                Spacer()
+                    Spacer()
 
-                HStack(spacing: 8) {
-                    // Instant 1-click Transparency Pill (cycles 100% -> 85% -> 70% -> 50% -> 100%)
+                    // Right: Opacity Preset Pill
                     Button(action: {
                         windowManager.cyclePreset()
                     }) {
-                        HStack(spacing: 3) {
+                        HStack(spacing: 3.5) {
                             Image(systemName: "circle.lefthalf.filled")
-                                .font(.system(size: 8))
+                                .font(.system(size: 9))
                             Text(windowManager.formattedOpacity)
-                                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
                         }
-                        .foregroundColor(windowManager.paneOpacity < 0.99 ? .cyan : .gray)
+                        .foregroundColor(windowManager.paneOpacity < 0.99 ? .cyan : .white.opacity(0.7))
+                        .padding(.horizontal, 7)
+                        .frame(height: 20)
+                        .background(windowManager.paneOpacity < 0.99 ? Color.cyan.opacity(0.15) : Color.white.opacity(0.07))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(
+                                windowManager.paneOpacity < 0.99 ? Color.cyan.opacity(0.4) : Color.white.opacity(0.12),
+                                lineWidth: 0.5
+                            )
+                        )
                     }
                     .buttonStyle(.plain)
-                    .help("Click to cycle opacity: 100% → 85% → 70% → 50% (or press [ and ])")
-
-                    Button(action: {
-                        AppDelegate.shared?.hidePanel()
-                    }) {
-                        HStack(spacing: 3) {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 5, height: 5)
-                            Text("On Top")
-                                .font(.system(size: 10))
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .help("Click to Hide (Esc or ⌘W)")
+                    .help("Window Opacity (Click to cycle or use [ / ])")
                 }
+                .padding(.horizontal, 10)
+                .frame(width: GameConfig.gameWidth, height: GameConfig.footerHeight - 1)
             }
-            .padding(.horizontal, 12)
             .frame(width: GameConfig.gameWidth, height: GameConfig.footerHeight)
-            .background(Color(hex: "#111111"))
+            .background(Color(hex: "#0e0e11"))
         }
         .frame(width: GameConfig.gameWidth, height: GameConfig.totalHeight)
         .clipped()
         .animation(.easeInOut(duration: 0.15), value: engine.showHistory)
+    }
+
+    private var capsuleDivider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.12))
+            .frame(width: 1, height: 11)
+    }
+
+    private func footerIconButton(icon: String, helpText: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundColor(.white.opacity(0.7))
+                .frame(width: 25, height: 20)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(helpText)
     }
 }
