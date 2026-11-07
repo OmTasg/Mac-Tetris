@@ -116,6 +116,30 @@ struct StudyLockOverlayView: View {
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
 
+            // Accountability Track Record
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 9))
+                        .foregroundColor(.green)
+                    Text("\(lockManager.completedCount) Completed")
+                        .font(.system(size: 9.5, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+
+                if lockManager.giveUpCount > 0 {
+                    Text("•").foregroundColor(.gray.opacity(0.4)).font(.system(size: 8))
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.raised.fill")
+                            .font(.system(size: 8.5))
+                            .foregroundColor(.red)
+                        Text("\(lockManager.giveUpCount) Gave Up")
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundColor(.red.opacity(0.85))
+                    }
+                }
+            }
+
             Spacer().frame(height: 4)
 
             // Bottom Actions
@@ -249,6 +273,24 @@ struct StudyLockOverlayView: View {
                     .foregroundColor(.gray)
                     .lineSpacing(2)
 
+                // Accountability Warning Banner
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.red)
+                    Text("Accountability: Given up \(lockManager.giveUpCount) time\(lockManager.giveUpCount == 1 ? "" : "s"). Breaking this will make it \(lockManager.giveUpCount + 1)!")
+                        .font(.system(size: 9.5, weight: .bold))
+                        .foregroundColor(.red.opacity(0.95))
+                }
+                .padding(6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.12))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.red.opacity(0.3), lineWidth: 0.5)
+                )
+
                 Text("\"\(lockManager.requiredFrictionPhrase)\"")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundColor(.yellow)
@@ -330,6 +372,47 @@ struct StudyLockSetupView: View {
                 Text("Lock Stacker to focus without downtime distractions.")
                     .font(.system(size: 10.5))
                     .foregroundColor(.gray)
+            }
+
+            // Accountability Track Record Card
+            HStack(spacing: 8) {
+                // Completed Sessions Pill
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundColor(.green)
+                        .font(.system(size: 10))
+                    Text("\(lockManager.completedCount) Completed")
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 22)
+                .background(Color.green.opacity(0.12))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.green.opacity(0.3), lineWidth: 0.5))
+
+                // Gave Up Counter Pill
+                HStack(spacing: 4) {
+                    Image(systemName: "hand.raised.fill")
+                        .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
+                        .font(.system(size: 8.5))
+                    Text("\(lockManager.giveUpCount) Gave Up")
+                        .font(.system(size: 9.5, weight: .bold))
+                        .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 22)
+                .background(lockManager.giveUpCount > 0 ? Color.red.opacity(0.15) : Color.white.opacity(0.06))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(lockManager.giveUpCount > 0 ? Color.red.opacity(0.4) : Color.white.opacity(0.12), lineWidth: 0.5))
+
+                Spacer()
+
+                if lockManager.totalSessions > 0 {
+                    Text("\(String(format: "%.0f%%", lockManager.disciplineRate)) Focus")
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .foregroundColor(lockManager.disciplineRate >= 80 ? .green : (lockManager.disciplineRate >= 50 ? .yellow : .red))
+                }
             }
 
             // Presets

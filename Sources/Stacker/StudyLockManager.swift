@@ -16,6 +16,10 @@ final class StudyLockManager: ObservableObject {
     @Published var sessionJustFinished: Bool = false
     @Published var currentQuoteIndex: Int = 0
 
+    // Accountability Tracking
+    @Published private(set) var giveUpCount: Int = 0
+    @Published private(set) var completedCount: Int = 0
+
     // Interactive UI State (avoids @State compiler macro requirements)
     @Published var showEmergencyUnlock: Bool = false
     @Published var typedPhrase: String = ""
@@ -58,7 +62,18 @@ final class StudyLockManager: ObservableObject {
         frictionPhrase
     }
 
+    var totalSessions: Int {
+        completedCount + giveUpCount
+    }
+
+    var disciplineRate: Double {
+        guard totalSessions > 0 else { return 100.0 }
+        return (Double(completedCount) / Double(totalSessions)) * 100.0
+    }
+
     private init() {
+        self.giveUpCount = UserDefaults.standard.integer(forKey: "stacker_lock_give_ups")
+        self.completedCount = UserDefaults.standard.integer(forKey: "stacker_lock_completed_sessions")
         checkSavedLock()
     }
 
@@ -119,7 +134,12 @@ final class StudyLockManager: ObservableObject {
         self.lockedUntil = nil
         self.remainingSeconds = 0
         self.formattedRemainingTime = "00:00"
-        if !isEmergency {
+        if isEmergency {
+            self.giveUpCount += 1
+            UserDefaults.standard.set(self.giveUpCount, forKey: "stacker_lock_give_ups")
+        } else {
+            self.completedCount += 1
+            UserDefaults.standard.set(self.completedCount, forKey: "stacker_lock_completed_sessions")
             self.sessionJustFinished = true
             NSSound(named: "Glass")?.play()
         }

@@ -270,6 +270,7 @@ struct ScoreHistoryView: View {
 struct AnalyticsDashboardView: View {
     let analytics: GameAnalytics
     @ObservedObject var engine: GameEngine
+    @ObservedObject private var lockManager = StudyLockManager.shared
 
     private var isCurrentRunBest: Bool {
         guard !engine.isDead && engine.score > 0 else { return false }
@@ -525,6 +526,68 @@ struct AnalyticsDashboardView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.white.opacity(0.04))
                     )
+                }
+
+                // 7. Study Lock Accountability
+                if lockManager.totalSessions > 0 {
+                    VStack(alignment: .leading, spacing: 6) {
+                        sectionHeader(title: "STUDY FOCUS & ACCOUNTABILITY", icon: "lock.shield.fill", color: .yellow)
+
+                        VStack(spacing: 8) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Discipline Rate")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white)
+                                    Text("Completed vs broken locks")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                                Text(String(format: "%.0f%%", lockManager.disciplineRate))
+                                    .font(.system(size: 17, weight: .heavy, design: .monospaced))
+                                    .foregroundColor(lockManager.disciplineRate >= 80 ? .green : (lockManager.disciplineRate >= 50 ? .yellow : .red))
+                            }
+
+                            // Progress Bar
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color.red.opacity(0.4))
+                                        .frame(height: 6)
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color.green)
+                                        .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(lockManager.disciplineRate / 100.0))), height: 6)
+                                }
+                            }
+                            .frame(height: 6)
+
+                            HStack {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundColor(.green)
+                                        .font(.system(size: 9))
+                                    Text("\(lockManager.completedCount) Completed")
+                                        .font(.system(size: 9.5, weight: .semibold))
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                                Spacer()
+                                HStack(spacing: 4) {
+                                    Image(systemName: "hand.raised.fill")
+                                        .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
+                                        .font(.system(size: 9))
+                                    Text("\(lockManager.giveUpCount) Gave Up")
+                                        .font(.system(size: 9.5, weight: .bold))
+                                        .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
+                                }
+                            }
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.white.opacity(0.06))
+                        )
+                    }
                 }
             }
             .padding(.horizontal, 12)
