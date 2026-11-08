@@ -50,9 +50,11 @@ final class GameEngine: ObservableObject {
     private var gravityCounter: Int = 0
     private var lockTimer: Int = 0
     private var lockResets: Int = 0
-    private let maxLockResets: Int = 15
-    private let standardLockDelay: Int = 27 // ~450ms natural grace period (matches original LOCK_DELAY: 450)
-    private let softDropLockDelay: Int = 15 // ~250ms comfortable grace period when holding Down
+    private var totalGroundFrames: Int = 0
+    private let maxLockResets: Int = 5
+    private let maxTotalGroundFrames: Int = 45 // ~750ms absolute cap on ground to prevent infinite stalling
+    private let standardLockDelay: Int = 18    // ~300ms snappy grace period (shortened from 450ms)
+    private let softDropLockDelay: Int = 10    // ~166ms quick lock when holding Down
     private var isSoftDropping: Bool = false
     private var spawnDelayTimer: Int = 0
     private let spawnDelayFrames: Int = 1   // Fast, snappy 1-frame (~16ms) spawn delay
@@ -132,6 +134,7 @@ final class GameEngine: ObservableObject {
         gravityCounter = 0
         lockTimer = 0
         lockResets = 0
+        totalGroundFrames = 0
         spawnDelayTimer = 0
         isSpawning = false
         softDropScoreAccumulator = 0
@@ -173,6 +176,7 @@ final class GameEngine: ObservableObject {
         gravityCounter = 0
         lockTimer = 0
         lockResets = 0
+        totalGroundFrames = 0
     }
 
     func startLoop() {
@@ -239,6 +243,7 @@ final class GameEngine: ObservableObject {
 
         if canFall {
             lockTimer = 0
+            totalGroundFrames = 0
             gravityCounter += 1
             let dropInterval = isSoftDropping ? softDropSpeed : normalGravitySpeed
 
@@ -259,11 +264,9 @@ final class GameEngine: ObservableObject {
         } else {
             // Block resting on floor or on top of another block
             lockTimer += 1
-            var threshold = isSoftDropping ? softDropLockDelay : standardLockDelay
-            if isStackInDangerZone && !isSoftDropping {
-                threshold += 4 // ~66ms clutch grace in danger zone
-            }
-            if lockTimer >= threshold {
+            totalGroundFrames += 1
+            let threshold = isSoftDropping ? softDropLockDelay : standardLockDelay
+            if lockTimer >= threshold || totalGroundFrames >= maxTotalGroundFrames {
                 lockPiece()
             }
         }
@@ -274,6 +277,7 @@ final class GameEngine: ObservableObject {
         mergeCurrentPiece()
         score += 12 // +20% boost to placement landing score (was 10)
         lockTimer = 0
+        totalGroundFrames = 0
         gravityCounter = 0
         lockResets = 0
     }
@@ -287,10 +291,10 @@ final class GameEngine: ObservableObject {
         }
     }
 
-    // Reset lock delay on successful movement or rotation
+    // Reset lock delay on successful movement or rotation (capped to prevent infinite stalling)
     private func onPieceMovedOrRotated() {
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
-            if lockResets < maxLockResets {
+            if lockResets < maxLockResets && totalGroundFrames < maxTotalGroundFrames {
                 lockTimer = 0
                 lockResets += 1
             }
@@ -385,7 +389,7 @@ final class GameEngine: ObservableObject {
         lockPiece()
     }
 
-    // MARK: - Linear Rotation with Wall Kicks & Floor Kicks
+    // MARK: - Linear Rotation with Wall Kicks & Collision Protection
     func rotate(dir: Int = 1) {
         resumeIfPaused()
         guard !isDead && !isPaused && !isSpawning else { return }
@@ -400,38 +404,23 @@ final class GameEngine: ObservableObject {
         let lateralFirst = dir > 0 ? -1 : 1
         let lateralSecond = -lateralFirst
 
-        // Prioritized kick offsets (dx, dy):
+        // Strict horizontal kicks at current row (dy = 0):
         // 1. In place: (0, 0)
-        // 2. Upward floor/stack lift: (0, -1) in the exact same column so it rotates inside the gap
-        // 3. 1-cell lateral nudges within the gap: (±1, 0)
-        // 4. Diagonal clearance: (±1, -1)
-        // 5. Deep vertical lift: (0, -2) for upright pieces touching floor
-        // 6. Diagonal lift: (±1, -2)
-        // NOTE: For 3x3 pieces, |dx| is strictly <= 1 to prevent pieces from teleporting
-        // out of gaps and jumping 2 or 3 columns away onto neighboring stacks.
+        // 2. 1-cell nudge in rotation direction: (lateralFirst, 0)
+        // 3. 1-cell nudge in opposite direction: (lateralSecond, 0)
         var kicks: [(dx: Int, dy: Int)] = [
             (0, 0),
-            (0, -1),
             (lateralFirst, 0),
-            (lateralSecond, 0),
-            (lateralFirst, -1),
-            (lateralSecond, -1),
-            (0, -2),
-            (lateralFirst, -2),
-            (lateralSecond, -2)
+            (lateralSecond, 0)
         ]
 
-        // For the 4x4 I-piece only, allow 2-column wall kicks as a last resort
-        // (needed when rotating a 4-long horizontal bar against the outer boundary walls)
+        // For the 4x4 I-piece only, allow 2-column wall kicks against outer board walls
         if piece == .i {
             kicks.append((lateralFirst * 2, 0))
             kicks.append((lateralSecond * 2, 0))
-            kicks.append((lateralFirst * 2, -1))
-            kicks.append((lateralSecond * 2, -1))
-            kicks.append((lateralFirst * 2, -2))
-            kicks.append((lateralSecond * 2, -2))
         }
 
+        // Check horizontal candidates at the exact same row (gridY)
         for kick in kicks {
             let testX = gridX + kick.dx
             let testY = gridY + kick.dy
@@ -444,6 +433,41 @@ final class GameEngine: ObservableObject {
                 return
             }
         }
+
+        // Only if the piece is colliding strictly with the empty bottom floor of the arena (row >= GameConfig.rows)
+        // and NOT with any settled arena blocks, allow a single 1-row upward floor clearance (0, -1).
+        // If it collides with ANY settled block, it is smashed against another piece and CANNOT rotate without free space.
+        if isCollidingOnlyWithArenaFloor(shape: testShape, atX: gridX, atY: gridY) {
+            if canPlace(shape: testShape, atX: gridX, atY: gridY - 1) {
+                gridY -= 1
+                currentRotation = nextRot
+                currentShape = testShape
+                onPieceMovedOrRotated()
+                return
+            }
+        }
+    }
+
+    private func isCollidingOnlyWithArenaFloor(shape: [[Int]], atX testX: Int, atY testY: Int) -> Bool {
+        var hitFloor = false
+        for r in 0..<shape.count {
+            for c in 0..<shape[r].count {
+                if shape[r][c] != 0 {
+                    let col = testX + c
+                    let row = testY + r
+                    if col < 0 || col >= GameConfig.columns {
+                        return false // out of bounds laterally
+                    }
+                    if row >= 0 && row < GameConfig.rows && arena[row][col] != 0 {
+                        return false // colliding with a settled block! Not allowed to kick up!
+                    }
+                    if row >= GameConfig.rows {
+                        hitFloor = true
+                    }
+                }
+            }
+        }
+        return hitFloor
     }
 
     // MARK: - Pause Controls
