@@ -407,61 +407,86 @@ struct StudyLockSetupView: View {
                     .foregroundColor(.gray)
             }
 
-            // Accountability Track Record Card
-            HStack(spacing: 8) {
-                // Completed Sessions Pill
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundColor(.green)
-                        .font(.system(size: 10))
-                    Text("\(lockManager.completedCount) Completed")
-                        .font(.system(size: 9.5, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.9))
+            // Focus & Accountability Stats Summary Card
+            HStack(spacing: 0) {
+                // 1. Completed
+                VStack(spacing: 2) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.green)
+                        Text("\(lockManager.completedCount)")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+                    Text("Completed")
+                        .font(.system(size: 8.5, weight: .medium))
+                        .foregroundColor(.gray)
                 }
-                .padding(.horizontal, 8)
-                .frame(height: 22)
-                .background(Color.green.opacity(0.12))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.green.opacity(0.3), lineWidth: 0.5))
+                .frame(maxWidth: .infinity)
 
-                // Total Locked Time Pill
-                HStack(spacing: 4) {
-                    Image(systemName: "hourglass.bottomhalf.filled")
-                        .foregroundColor(.cyan)
-                        .font(.system(size: 8.5))
-                    Text("\(lockManager.totalLockedMinutes)m")
-                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                        .foregroundColor(.cyan)
+                Rectangle()
+                    .fill(Color.white.opacity(0.1))
+                    .frame(width: 1, height: 22)
+
+                // 2. Total Time Locked
+                VStack(spacing: 2) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "hourglass.bottomhalf.filled")
+                            .font(.system(size: 9.5))
+                            .foregroundColor(.cyan)
+                        Text(lockManager.formattedTotalLockedTime)
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(.cyan)
+                    }
+                    Text("Total Locked")
+                        .font(.system(size: 8.5, weight: .medium))
+                        .foregroundColor(.gray)
                 }
-                .padding(.horizontal, 7)
-                .frame(height: 22)
-                .background(Color.cyan.opacity(0.12))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.cyan.opacity(0.3), lineWidth: 0.5))
+                .frame(maxWidth: .infinity)
 
-                // Gave Up Counter Pill
-                HStack(spacing: 4) {
-                    Image(systemName: "hand.raised.fill")
-                        .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
-                        .font(.system(size: 8.5))
-                    Text("\(lockManager.giveUpCount) Gave Up")
-                        .font(.system(size: 9.5, weight: .bold))
-                        .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
+                Rectangle()
+                    .fill(Color.white.opacity(0.1))
+                    .frame(width: 1, height: 22)
+
+                // 3. Gave Up
+                VStack(spacing: 2) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "hand.raised.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
+                        Text("\(lockManager.giveUpCount)")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundColor(lockManager.giveUpCount > 0 ? .red : .white.opacity(0.8))
+                    }
+                    Text("Gave Up")
+                        .font(.system(size: 8.5, weight: .medium))
+                        .foregroundColor(.gray)
                 }
-                .padding(.horizontal, 8)
-                .frame(height: 22)
-                .background(lockManager.giveUpCount > 0 ? Color.red.opacity(0.15) : Color.white.opacity(0.06))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(lockManager.giveUpCount > 0 ? Color.red.opacity(0.4) : Color.white.opacity(0.12), lineWidth: 0.5))
+                .frame(maxWidth: .infinity)
 
-                Spacer()
+                Rectangle()
+                    .fill(Color.white.opacity(0.1))
+                    .frame(width: 1, height: 22)
 
-                if lockManager.totalSessions > 0 {
-                    Text("\(String(format: "%.0f%%", lockManager.disciplineRate)) Focus")
-                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                // 4. Focus Rate
+                VStack(spacing: 2) {
+                    Text("\(String(format: "%.0f%%", lockManager.disciplineRate))")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundColor(lockManager.disciplineRate >= 80 ? .green : (lockManager.disciplineRate >= 50 ? .yellow : .red))
+                    Text("Discipline")
+                        .font(.system(size: 8.5, weight: .medium))
+                        .foregroundColor(.gray)
                 }
+                .frame(maxWidth: .infinity)
             }
+            .padding(.vertical, 7)
+            .background(Color.white.opacity(0.05))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+            )
 
             // Presets
             VStack(alignment: .leading, spacing: 5) {
