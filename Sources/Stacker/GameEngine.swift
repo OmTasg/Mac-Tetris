@@ -391,25 +391,46 @@ final class GameEngine: ObservableObject {
         guard !isDead && !isPaused && !isSpawning else { return }
         guard let piece = TetrominoType(rawValue: currentShapeIndex) else { return }
 
+        // O-piece does not rotate
+        if piece == .o { return }
+
         let nextRot = (currentRotation + dir + 4) % 4
         let testShape = piece.allRotationStates[nextRot]
 
-        // Wall and floor kick offsets (dx, dy):
+        let lateralFirst = dir > 0 ? -1 : 1
+        let lateralSecond = -lateralFirst
+
+        // Prioritized kick offsets (dx, dy):
         // 1. In place: (0, 0)
-        // 2. Lateral kicks: (±1, 0), (±2, 0)
-        // 3. Upward floor kick: (0, -1) (lift up 1 row if touching floor or stack)
-        // 4. Diagonal kicks: (±1, -1)
-        // 5. Deep vertical kick: (0, -2) (essential for I-bar floor rotation)
-        // 6. Wide horizontal kicks: (±3, 0)
-        let kicks: [(dx: Int, dy: Int)] = [
+        // 2. Upward floor/stack lift: (0, -1) in the exact same column so it rotates inside the gap
+        // 3. 1-cell lateral nudges within the gap: (±1, 0)
+        // 4. Diagonal clearance: (±1, -1)
+        // 5. Deep vertical lift: (0, -2) for upright pieces touching floor
+        // 6. Diagonal lift: (±1, -2)
+        // NOTE: For 3x3 pieces, |dx| is strictly <= 1 to prevent pieces from teleporting
+        // out of gaps and jumping 2 or 3 columns away onto neighboring stacks.
+        var kicks: [(dx: Int, dy: Int)] = [
             (0, 0),
-            (1, 0), (-1, 0),
             (0, -1),
-            (2, 0), (-2, 0),
-            (1, -1), (-1, -1),
+            (lateralFirst, 0),
+            (lateralSecond, 0),
+            (lateralFirst, -1),
+            (lateralSecond, -1),
             (0, -2),
-            (3, 0), (-3, 0)
+            (lateralFirst, -2),
+            (lateralSecond, -2)
         ]
+
+        // For the 4x4 I-piece only, allow 2-column wall kicks as a last resort
+        // (needed when rotating a 4-long horizontal bar against the outer boundary walls)
+        if piece == .i {
+            kicks.append((lateralFirst * 2, 0))
+            kicks.append((lateralSecond * 2, 0))
+            kicks.append((lateralFirst * 2, -1))
+            kicks.append((lateralSecond * 2, -1))
+            kicks.append((lateralFirst * 2, -2))
+            kicks.append((lateralSecond * 2, -2))
+        }
 
         for kick in kicks {
             let testX = gridX + kick.dx
