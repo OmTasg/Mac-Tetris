@@ -156,52 +156,32 @@ enum TetrominoType: Int, CaseIterable {
             ]
 
         case .s:
-            return [
-                [
-                    [0, 1, 1],
-                    [1, 1, 0],
-                    [0, 0, 0]
-                ],
-                [
-                    [0, 1, 0],
-                    [0, 1, 1],
-                    [0, 0, 1]
-                ],
-                [
-                    [0, 0, 0],
-                    [0, 1, 1],
-                    [1, 1, 0]
-                ],
-                [
-                    [1, 0, 0],
-                    [1, 1, 0],
-                    [0, 1, 0]
-                ]
+            let sH = [
+                [0, 1, 1],
+                [1, 1, 0],
+                [0, 0, 0]
             ]
+            let sV = [
+                [0, 1, 0],
+                [0, 1, 1],
+                [0, 0, 1]
+            ]
+            // Symmetric 2-state rotation so S spins cleanly in place without wandering
+            return [sH, sV, sH, sV]
 
         case .z:
-            return [
-                [
-                    [1, 1, 0],
-                    [0, 1, 1],
-                    [0, 0, 0]
-                ],
-                [
-                    [0, 0, 1],
-                    [0, 1, 1],
-                    [0, 1, 0]
-                ],
-                [
-                    [0, 0, 0],
-                    [1, 1, 0],
-                    [0, 1, 1]
-                ],
-                [
-                    [0, 1, 0],
-                    [1, 1, 0],
-                    [1, 0, 0]
-                ]
+            let zH = [
+                [1, 1, 0],
+                [0, 1, 1],
+                [0, 0, 0]
             ]
+            let zV = [
+                [0, 0, 1],
+                [0, 1, 1],
+                [0, 1, 0]
+            ]
+            // Symmetric 2-state rotation so Z spins cleanly in place without wandering
+            return [zH, zV, zH, zV]
         }
     }
 

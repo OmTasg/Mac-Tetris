@@ -115,6 +115,11 @@ final class GameEngine: ObservableObject {
         isStackInDangerZone = false
     }
 
+    // Clutch amnesty when close to the top (rows 0...6 or danger zone)
+    var isCloseToTop: Bool {
+        gridY <= 6 || isStackInDangerZone
+    }
+
     func startNewGame() {
         guard !StudyLockManager.shared.isLocked else { return }
         flushActiveTime(persist: true)
@@ -265,8 +270,17 @@ final class GameEngine: ObservableObject {
             // Block resting on floor or on top of another block
             lockTimer += 1
             totalGroundFrames += 1
-            let threshold = isSoftDropping ? softDropLockDelay : standardLockDelay
-            if lockTimer >= threshold || totalGroundFrames >= maxTotalGroundFrames {
+
+            // Dynamic amnesty when close to the top: gives players more time and resets to react
+            let threshold: Int
+            if isSoftDropping {
+                threshold = isCloseToTop ? (softDropLockDelay + 4) : softDropLockDelay
+            } else {
+                threshold = isCloseToTop ? (standardLockDelay + 10) : standardLockDelay // ~466ms near ceiling vs 300ms lower
+            }
+
+            let maxGround = isCloseToTop ? 70 : maxTotalGroundFrames // ~1.17s total near ceiling vs 750ms lower
+            if lockTimer >= threshold || totalGroundFrames >= maxGround {
                 lockPiece()
             }
         }
@@ -291,10 +305,12 @@ final class GameEngine: ObservableObject {
         }
     }
 
-    // Reset lock delay on successful movement or rotation (capped to prevent infinite stalling)
+    // Reset lock delay on successful movement or rotation (with extra amnesty near the top)
     private func onPieceMovedOrRotated() {
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
-            if lockResets < maxLockResets && totalGroundFrames < maxTotalGroundFrames {
+            let maxResets = isCloseToTop ? 8 : maxLockResets // 8 resets near ceiling vs 5 lower
+            let maxGround = isCloseToTop ? 70 : maxTotalGroundFrames
+            if lockResets < maxResets && totalGroundFrames < maxGround {
                 lockTimer = 0
                 lockResets += 1
             }
