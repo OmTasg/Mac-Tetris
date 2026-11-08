@@ -19,6 +19,7 @@ final class StudyLockManager: ObservableObject {
     // Accountability Tracking
     @Published private(set) var giveUpCount: Int = 0
     @Published private(set) var completedCount: Int = 0
+    @Published private(set) var totalLockedMinutes: Int = 0
 
     // Interactive UI State (avoids @State compiler macro requirements)
     @Published var showEmergencyUnlock: Bool = false
@@ -71,9 +72,20 @@ final class StudyLockManager: ObservableObject {
         return (Double(completedCount) / Double(totalSessions)) * 100.0
     }
 
+    var formattedTotalLockedTime: String {
+        if totalLockedMinutes >= 60 {
+            let h = totalLockedMinutes / 60
+            let m = totalLockedMinutes % 60
+            return m == 0 ? "\(h)h" : "\(h)h \(m)m"
+        } else {
+            return "\(totalLockedMinutes)m"
+        }
+    }
+
     private init() {
         self.giveUpCount = UserDefaults.standard.integer(forKey: "stacker_lock_give_ups")
         self.completedCount = UserDefaults.standard.integer(forKey: "stacker_lock_completed_sessions")
+        self.totalLockedMinutes = UserDefaults.standard.integer(forKey: "stacker_lock_total_minutes")
         checkSavedLock()
     }
 
@@ -139,7 +151,10 @@ final class StudyLockManager: ObservableObject {
             UserDefaults.standard.set(self.giveUpCount, forKey: "stacker_lock_give_ups")
         } else {
             self.completedCount += 1
+            let sessionMinutes = max(1, self.totalDurationSeconds / 60)
+            self.totalLockedMinutes += sessionMinutes
             UserDefaults.standard.set(self.completedCount, forKey: "stacker_lock_completed_sessions")
+            UserDefaults.standard.set(self.totalLockedMinutes, forKey: "stacker_lock_total_minutes")
             self.sessionJustFinished = true
             NSSound(named: "Glass")?.play()
         }

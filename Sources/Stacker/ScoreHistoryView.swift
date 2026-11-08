@@ -581,6 +581,18 @@ struct AnalyticsDashboardView: View {
                                         .foregroundColor(lockManager.giveUpCount > 0 ? .red : .gray)
                                 }
                             }
+
+                            Divider().background(Color.white.opacity(0.1))
+
+                            HStack {
+                                Text("Total Time Locked")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.gray)
+                                Spacer()
+                                Text("\(lockManager.totalLockedMinutes) min (\(lockManager.formattedTotalLockedTime))")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.cyan)
+                            }
                         }
                         .padding(10)
                         .background(

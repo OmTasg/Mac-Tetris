@@ -95,6 +95,29 @@ struct StudyLockOverlayView: View {
             .frame(height: 6)
             .padding(.horizontal, 36)
 
+            // Total Successful Lock Time Tracker
+            HStack(spacing: 5) {
+                Image(systemName: "hourglass.bottomhalf.filled")
+                    .font(.system(size: 9.5))
+                    .foregroundColor(.cyan)
+                Text("\(lockManager.totalLockedMinutes) min successfully locked")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.95))
+
+                if lockManager.totalLockedMinutes >= 60 {
+                    Text("(\(lockManager.formattedTotalLockedTime))")
+                        .font(.system(size: 9))
+                        .foregroundColor(.gray)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4.5)
+            .background(Color.cyan.opacity(0.12))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(Color.cyan.opacity(0.3), lineWidth: 0.5)
+            )
+
             Spacer()
 
             // Motivational Quote Card
@@ -193,6 +216,16 @@ struct StudyLockOverlayView: View {
                 Text("Great job staying focused and productive.")
                     .font(.system(size: 12))
                     .foregroundColor(.gray)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "hourglass.bottomhalf.filled")
+                        .font(.system(size: 10))
+                        .foregroundColor(.cyan)
+                    Text("Total Locked: \(lockManager.totalLockedMinutes) min (\(lockManager.formattedTotalLockedTime))")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.cyan)
+                }
+                .padding(.top, 4)
             }
 
             Spacer()
@@ -390,6 +423,21 @@ struct StudyLockSetupView: View {
                 .background(Color.green.opacity(0.12))
                 .clipShape(Capsule())
                 .overlay(Capsule().stroke(Color.green.opacity(0.3), lineWidth: 0.5))
+
+                // Total Locked Time Pill
+                HStack(spacing: 4) {
+                    Image(systemName: "hourglass.bottomhalf.filled")
+                        .foregroundColor(.cyan)
+                        .font(.system(size: 8.5))
+                    Text("\(lockManager.totalLockedMinutes)m")
+                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                        .foregroundColor(.cyan)
+                }
+                .padding(.horizontal, 7)
+                .frame(height: 22)
+                .background(Color.cyan.opacity(0.12))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.cyan.opacity(0.3), lineWidth: 0.5))
 
                 // Gave Up Counter Pill
                 HStack(spacing: 4) {
