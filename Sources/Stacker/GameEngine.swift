@@ -53,11 +53,11 @@ final class GameEngine: ObservableObject {
     private var totalGroundFrames: Int = 0
     private let maxLockResets: Int = 5
     private let maxTotalGroundFrames: Int = 45 // ~750ms absolute cap on ground to prevent infinite stalling
-    private let standardLockDelay: Int = 18    // ~300ms snappy grace period (shortened from 450ms)
-    private let softDropLockDelay: Int = 10    // ~166ms quick lock when holding Down
+    private let standardLockDelay: Int = 16    // ~266ms snappy grace period (shortened from 450ms)
+    private let softDropLockDelay: Int = 3     // ~50ms quick lock when holding Down (matches softDropSpeed)
     private var isSoftDropping: Bool = false
     private var spawnDelayTimer: Int = 0
-    private let spawnDelayFrames: Int = 1   // Fast, snappy 1-frame (~16ms) spawn delay
+    private let spawnDelayFrames: Int = 0      // 0-frame seamless spawn delay for natural piece emergence
     private var softDropScoreAccumulator: Double = 0
 
     // Symmetrical, perfectly matched movement speeds
@@ -230,7 +230,7 @@ final class GameEngine: ObservableObject {
             ScoreHistoryManager.shared.save()
         }
 
-        // Tiny golden-ratio spawn delay between pieces (5 frames = ~83ms)
+        // Spawn delay between pieces (0 by default for instant, seamless emergence)
         if spawnDelayTimer > 0 {
             spawnDelayTimer -= 1
             if spawnDelayTimer == 0 {
@@ -381,6 +381,11 @@ final class GameEngine: ObservableObject {
     func setSoftDropping(_ active: Bool) {
         if active {
             resumeIfPaused()
+            // If piece is already resting on floor or obstacle, lock promptly on next tick
+            if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
+                let delay = isCloseToTop ? (softDropLockDelay + 4) : softDropLockDelay
+                lockTimer = max(lockTimer, delay)
+            }
         }
         isSoftDropping = active
     }
@@ -608,8 +613,9 @@ final class GameEngine: ObservableObject {
 
         currentShapeIndex = nextShapeIndex
         nextShapeIndex = bag.grabIndex(inDangerZone: isStackInDangerZone)
-        isSpawning = true
-        spawnDelayTimer = spawnDelayFrames // Tiny spawn delay (5 frames = ~83ms)
+        spawnPiece(shapeIndex: currentShapeIndex)
+        isSpawning = false
+        spawnDelayTimer = 0
 
         saveCurrentState()
     }
