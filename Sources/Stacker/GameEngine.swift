@@ -51,10 +51,10 @@ final class GameEngine: ObservableObject {
     private var lockTimer: Int = 0
     private var lockResets: Int = 0
     private var totalGroundFrames: Int = 0
-    private let maxLockResets: Int = 5
-    private let maxTotalGroundFrames: Int = 45 // ~750ms absolute cap on ground to prevent infinite stalling
-    private let standardLockDelay: Int = 16    // ~266ms snappy grace period (shortened from 450ms)
-    private let softDropLockDelay: Int = 3     // ~50ms quick lock when holding Down (matches softDropSpeed)
+    private let maxLockResets: Int = 6
+    private let maxTotalGroundFrames: Int = 60 // ~1.0s cap on ground to prevent infinite stalling while giving generous time
+    private let standardLockDelay: Int = 22    // ~366ms generous grace period
+    private let softDropLockDelay: Int = 10    // ~166ms comfortable lock window when holding Down
     private var isSoftDropping: Bool = false
     private var spawnDelayTimer: Int = 0
     private let spawnDelayFrames: Int = 0      // 0-frame seamless spawn delay for natural piece emergence
@@ -65,9 +65,9 @@ final class GameEngine: ObservableObject {
     private var isRightHeld: Bool = false
     private var leftHoldTimer: Int = 0
     private var rightHoldTimer: Int = 0
-    private let dasDelay: Int = 5   // ~80ms hold threshold
-    private let arrSpeed: Int = 4   // ~66ms repeat interval (matches original HORIZONTAL_MOVEMENT_INTERVAL: 76ms)
-    private let softDropSpeed: Int = 3 // ~50ms per row (matches original DROP_KEY_INTERVAL: 44ms)
+    private let dasDelay: Int = 6   // ~100ms hold threshold (gentle, controllable start)
+    private let arrSpeed: Int = 5   // ~83ms repeat interval (slowed just a tiny bit for precision)
+    private let softDropSpeed: Int = 4 // ~66ms per row (slowed just a tiny bit for controllable drop)
     private let normalGravitySpeed: Int = 21 // ~350ms per row (matches original DROP_INTERVAL: 350ms)
 
     private let bag = Bag()
@@ -274,12 +274,12 @@ final class GameEngine: ObservableObject {
             // Dynamic amnesty when close to the top: gives players more time and resets to react
             let threshold: Int
             if isSoftDropping {
-                threshold = isCloseToTop ? (softDropLockDelay + 4) : softDropLockDelay
+                threshold = isCloseToTop ? (softDropLockDelay + 6) : softDropLockDelay
             } else {
-                threshold = isCloseToTop ? (standardLockDelay + 10) : standardLockDelay // ~466ms near ceiling vs 300ms lower
+                threshold = isCloseToTop ? (standardLockDelay + 10) : standardLockDelay // ~533ms near ceiling vs 366ms lower
             }
 
-            let maxGround = isCloseToTop ? 70 : maxTotalGroundFrames // ~1.17s total near ceiling vs 750ms lower
+            let maxGround = isCloseToTop ? 85 : maxTotalGroundFrames // ~1.42s total near ceiling vs 1.0s lower
             if lockTimer >= threshold || totalGroundFrames >= maxGround {
                 lockPiece()
             }
@@ -308,8 +308,8 @@ final class GameEngine: ObservableObject {
     // Reset lock delay on successful movement or rotation (with extra amnesty near the top)
     private func onPieceMovedOrRotated() {
         if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
-            let maxResets = isCloseToTop ? 8 : maxLockResets // 8 resets near ceiling vs 5 lower
-            let maxGround = isCloseToTop ? 70 : maxTotalGroundFrames
+            let maxResets = isCloseToTop ? 10 : maxLockResets // 10 resets near ceiling vs 6 lower
+            let maxGround = isCloseToTop ? 85 : maxTotalGroundFrames
             if lockResets < maxResets && totalGroundFrames < maxGround {
                 lockTimer = 0
                 lockResets += 1
@@ -381,11 +381,6 @@ final class GameEngine: ObservableObject {
     func setSoftDropping(_ active: Bool) {
         if active {
             resumeIfPaused()
-            // If piece is already resting on floor or obstacle, lock promptly on next tick
-            if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
-                let delay = isCloseToTop ? (softDropLockDelay + 4) : softDropLockDelay
-                lockTimer = max(lockTimer, delay)
-            }
         }
         isSoftDropping = active
     }
