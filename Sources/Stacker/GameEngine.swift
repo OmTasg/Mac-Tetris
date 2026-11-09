@@ -60,14 +60,14 @@ final class GameEngine: ObservableObject {
     private let spawnDelayFrames: Int = 0      // 0-frame seamless spawn delay for natural piece emergence
     private var softDropScoreAccumulator: Double = 0
 
-    // Symmetrical, perfectly matched movement speeds
+    // Symmetrical, fast & smooth high-frame-rate movement speeds
     private var isLeftHeld: Bool = false
     private var isRightHeld: Bool = false
     private var leftHoldTimer: Int = 0
     private var rightHoldTimer: Int = 0
-    private let dasDelay: Int = 6   // ~100ms hold threshold (gentle, controllable start)
-    private let arrSpeed: Int = 5   // ~83ms repeat interval (slowed just a tiny bit for precision)
-    private let softDropSpeed: Int = 4 // ~66ms per row (slowed just a tiny bit for controllable drop)
+    private let dasDelay: Int = 4   // ~66ms fast, responsive transition into hold
+    private let arrSpeed: Int = 2   // ~33ms high-frame-rate glide every 2 frames (30 cols/sec)
+    private let softDropSpeed: Int = 2 // ~33ms smooth high-speed drop every 2 frames (30 rows/sec)
     private let normalGravitySpeed: Int = 21 // ~350ms per row (matches original DROP_INTERVAL: 350ms)
 
     private let bag = Bag()
@@ -190,6 +190,7 @@ final class GameEngine: ObservableObject {
         let t = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             self?.tick()
         }
+        t.tolerance = 0
         RunLoop.main.add(t, forMode: .common)
         self.timer = t
     }
@@ -381,6 +382,15 @@ final class GameEngine: ObservableObject {
     func setSoftDropping(_ active: Bool) {
         if active {
             resumeIfPaused()
+            if !isSoftDropping && !isDead && !isPaused && !isSpawning {
+                // Immediate soft drop step on initial press for instant response
+                if canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
+                    gridY += 1
+                    gravityCounter = 0
+                    score += 1
+                    ScoreHistoryManager.shared.recordSoftDrop()
+                }
+            }
         }
         isSoftDropping = active
     }
