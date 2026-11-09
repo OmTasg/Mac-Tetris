@@ -136,7 +136,7 @@ final class GameEngine: ObservableObject {
         isRightHeld = false
         leftHoldTimer = 0
         rightHoldTimer = 0
-        gravityCounter = isSoftDropping ? (softDropSpeed - 1) : 0
+        gravityCounter = 0
         lockTimer = 0
         lockResets = 0
         totalGroundFrames = 0
@@ -178,7 +178,7 @@ final class GameEngine: ObservableObject {
             gridY -= 1
         }
 
-        gravityCounter = isSoftDropping ? (softDropSpeed - 1) : 0
+        gravityCounter = 0
         lockTimer = 0
         lockResets = 0
         totalGroundFrames = 0
@@ -431,6 +431,9 @@ final class GameEngine: ObservableObject {
     func setSoftDropping(_ active: Bool) {
         if active {
             resumeIfPaused()
+            if !isSoftDropping {
+                gravityCounter = 0
+            }
         }
         isSoftDropping = active
     }
