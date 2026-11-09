@@ -372,7 +372,10 @@ final class ScoreHistoryManager: ObservableObject {
 
     func save() {
         let storage = HistoryStorage(entries: entries, totalPlayTime: totalPlayTime, analytics: analytics)
-        guard let data = try? JSONEncoder().encode(storage) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        let url = self.fileURL
+        DispatchQueue.global(qos: .utility).async {
+            guard let data = try? JSONEncoder().encode(storage) else { return }
+            try? data.write(to: url, options: .atomic)
+        }
     }
 }

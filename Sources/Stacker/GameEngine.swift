@@ -136,7 +136,7 @@ final class GameEngine: ObservableObject {
         isRightHeld = false
         leftHoldTimer = 0
         rightHoldTimer = 0
-        gravityCounter = 0
+        gravityCounter = isSoftDropping ? (softDropSpeed - 1) : 0
         lockTimer = 0
         lockResets = 0
         totalGroundFrames = 0
@@ -178,7 +178,7 @@ final class GameEngine: ObservableObject {
             gridY -= 1
         }
 
-        gravityCounter = 0
+        gravityCounter = isSoftDropping ? (softDropSpeed - 1) : 0
         lockTimer = 0
         lockResets = 0
         totalGroundFrames = 0
@@ -266,9 +266,18 @@ final class GameEngine: ObservableObject {
                     }
                     ScoreHistoryManager.shared.recordSoftDrop()
                 }
+                // If piece just landed and completes a line, clear instantly with zero pause!
+                if checkInstantLineClearOnRest() {
+                    return
+                }
             }
         } else {
             // Block resting on floor or on top of another block
+            // Instant line clear check: no pause when completing lines!
+            if checkInstantLineClearOnRest() {
+                return
+            }
+
             lockTimer += 1
             totalGroundFrames += 1
 
@@ -285,6 +294,44 @@ final class GameEngine: ObservableObject {
                 lockPiece()
             }
         }
+    }
+
+    // MARK: - Line Completion Pre-Check & Instant Clear
+    func wouldCompleteAnyLine() -> Bool {
+        for r in 0..<currentShape.count {
+            let boardRow = gridY + r
+            guard boardRow >= 0 && boardRow < GameConfig.rows else { continue }
+            guard currentShape[r].contains(where: { $0 != 0 }) else { continue }
+
+            var rowComplete = true
+            for c in 0..<GameConfig.columns {
+                if arena[boardRow][c] > 0 {
+                    continue
+                }
+                let pieceCol = c - gridX
+                if pieceCol >= 0 && pieceCol < currentShape[r].count && currentShape[r][pieceCol] != 0 {
+                    continue
+                }
+                rowComplete = false
+                break
+            }
+            if rowComplete {
+                return true
+            }
+        }
+        return false
+    }
+
+    @discardableResult
+    func checkInstantLineClearOnRest() -> Bool {
+        guard !isDead && !isPaused && !isSpawning else { return false }
+        if !canPlace(shape: currentShape, atX: gridX, atY: gridY + 1) {
+            if wouldCompleteAnyLine() {
+                lockPiece()
+                return true
+            }
+        }
+        return false
     }
 
     private func lockPiece() {
@@ -367,6 +414,7 @@ final class GameEngine: ObservableObject {
         if canPlace(shape: currentShape, atX: gridX - 1, atY: gridY) {
             gridX -= 1
             onPieceMovedOrRotated()
+            checkInstantLineClearOnRest()
         }
     }
 
@@ -376,6 +424,7 @@ final class GameEngine: ObservableObject {
         if canPlace(shape: currentShape, atX: gridX + 1, atY: gridY) {
             gridX += 1
             onPieceMovedOrRotated()
+            checkInstantLineClearOnRest()
         }
     }
 
@@ -447,6 +496,7 @@ final class GameEngine: ObservableObject {
                 currentRotation = nextRot
                 currentShape = testShape
                 onPieceMovedOrRotated()
+                checkInstantLineClearOnRest()
                 return
             }
         }
@@ -460,6 +510,7 @@ final class GameEngine: ObservableObject {
                 currentRotation = nextRot
                 currentShape = testShape
                 onPieceMovedOrRotated()
+                checkInstantLineClearOnRest()
                 return
             }
         }

@@ -80,8 +80,11 @@ final class StateManager {
     }
 
     func saveState(_ state: SavedGameState) {
-        guard let data = try? JSONEncoder().encode(state) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        let url = self.fileURL
+        DispatchQueue.global(qos: .utility).async {
+            guard let data = try? JSONEncoder().encode(state) else { return }
+            try? data.write(to: url, options: .atomic)
+        }
     }
 
     func loadState() -> SavedGameState? {
