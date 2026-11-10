@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
+        setupMainMenu()
         setupStatusItem()
         setupPanel()
         setupKeyMonitor()
@@ -20,6 +21,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.showPanel()
         }
+    }
+
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+
+        // App Menu
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "Hide Stacker", action: #selector(hidePanel), keyEquivalent: "w")
+        appMenu.addItem(withTitle: "Quit Stacker", action: #selector(quitApp), keyEquivalent: "q")
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        // Edit Menu (Essential for TextField Cut, Copy, Paste, Select All, Undo)
+        let editMenuItem = NSMenuItem()
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
+
+        NSApp.mainMenu = mainMenu
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -198,11 +226,16 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
         setupGlobalMonitors()
     }
 
-    func hidePanel() {
+    @objc func hidePanel() {
         engine.autoPause()
         engine.stopLoop()
         panel.orderOut(nil)
         removeGlobalMonitors()
+    }
+
+    func activateAndMakeKey() {
+        panel?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func updatePanelOpacity(_ opacity: Double) {
@@ -215,6 +248,49 @@ final class ClickableHostingView<Content: View>: NSHostingView<Content> {
             guard let self = self, self.panel.isVisible else { return event }
 
             let isDown = event.type == .keyDown
+
+            // 1. If Emergency Unlock sheet is open, prioritize text entry and dialog controls:
+            if StudyLockManager.shared.showEmergencyUnlock {
+                if event.modifierFlags.contains(.command) {
+                    let key = event.charactersIgnoringModifiers?.lowercased()
+                    if key == "w" {
+                        if isDown { self.hidePanel() }
+                        return nil
+                    } else if key == "q" {
+                        if isDown { self.quitApp() }
+                        return nil
+                    }
+                    // Pass standard edit commands (⌘V, ⌘C, ⌘A, ⌘X, ⌘Z) to the active TextField
+                    return event
+                }
+
+                // Escape: Cancel emergency unlock
+                if event.keyCode == 53 {
+                    if isDown {
+                        StudyLockManager.shared.showEmergencyUnlock = false
+                        StudyLockManager.shared.typedPhrase = ""
+                        StudyLockManager.shared.unlockError = false
+                    }
+                    return nil
+                }
+
+                // Enter / Return: Submit emergency unlock
+                if event.keyCode == 36 {
+                    if isDown {
+                        if StudyLockManager.shared.emergencyUnlock(typedPhrase: StudyLockManager.shared.typedPhrase) {
+                            StudyLockManager.shared.showEmergencyUnlock = false
+                            StudyLockManager.shared.typedPhrase = ""
+                            StudyLockManager.shared.unlockError = false
+                        } else {
+                            StudyLockManager.shared.unlockError = true
+                        }
+                    }
+                    return nil
+                }
+
+                // Forward all typing keys (letters, numbers, space, backspace, delete, arrows) to TextField
+                return event
+            }
 
             // Command shortcuts: ⌘W closes window, ⌘Q quits app, ⌘R prevented from resetting score
             if event.modifierFlags.contains(.command) {

@@ -4,6 +4,7 @@ import SwiftUI
 struct StudyLockOverlayView: View {
     @ObservedObject var lockManager = StudyLockManager.shared
     @ObservedObject var engine: GameEngine
+    @FocusState private var isFieldFocused: Bool
 
     var body: some View {
         ZStack {
@@ -185,6 +186,12 @@ struct StudyLockOverlayView: View {
 
                 Button(action: {
                     lockManager.showEmergencyUnlock.toggle()
+                    if lockManager.showEmergencyUnlock {
+                        AppDelegate.shared?.activateAndMakeKey()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            self.isFieldFocused = true
+                        }
+                    }
                 }) {
                     Text(lockManager.showEmergencyUnlock ? "Hide Emergency Options" : "Emergency Unlock...")
                         .font(.system(size: 10))
@@ -327,6 +334,7 @@ struct StudyLockOverlayView: View {
                 Text("\"\(lockManager.requiredFrictionPhrase)\"")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundColor(.yellow)
+                    .textSelection(.enabled)
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.black.opacity(0.5))
@@ -335,13 +343,18 @@ struct StudyLockOverlayView: View {
                 TextField("Type the phrase here to unlock...", text: $lockManager.typedPhrase)
                     .textFieldStyle(.plain)
                     .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundColor(.white)
+                    .focused($isFieldFocused)
                     .padding(8)
                     .background(Color.white.opacity(0.08))
                     .cornerRadius(6)
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(lockManager.unlockError ? Color.red : Color.gray.opacity(0.4), lineWidth: 1)
+                            .stroke(lockManager.unlockError ? Color.red : (isFieldFocused ? Color.yellow.opacity(0.8) : Color.gray.opacity(0.4)), lineWidth: 1)
                     )
+                    .onSubmit {
+                        attemptUnlock()
+                    }
 
                 HStack {
                     Spacer()
@@ -357,13 +370,7 @@ struct StudyLockOverlayView: View {
                     let isMatch = lockManager.typedPhrase.trimmingCharacters(in: .whitespacesAndNewlines) == lockManager.requiredFrictionPhrase
 
                     Button("Break Lock") {
-                        if lockManager.emergencyUnlock(typedPhrase: lockManager.typedPhrase) {
-                            lockManager.showEmergencyUnlock = false
-                            lockManager.typedPhrase = ""
-                            lockManager.unlockError = false
-                        } else {
-                            lockManager.unlockError = true
-                        }
+                        attemptUnlock()
                     }
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(isMatch ? .white : .gray)
@@ -385,6 +392,22 @@ struct StudyLockOverlayView: View {
                 .stroke(Color.white.opacity(0.15), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.6), radius: 20, x: 0, y: 10)
+        .onAppear {
+            AppDelegate.shared?.activateAndMakeKey()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                self.isFieldFocused = true
+            }
+        }
+    }
+
+    private func attemptUnlock() {
+        if lockManager.emergencyUnlock(typedPhrase: lockManager.typedPhrase) {
+            lockManager.showEmergencyUnlock = false
+            lockManager.typedPhrase = ""
+            lockManager.unlockError = false
+        } else {
+            lockManager.unlockError = true
+        }
     }
 }
 
