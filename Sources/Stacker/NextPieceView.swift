@@ -5,41 +5,50 @@ struct NextPieceView: View {
 
     var body: some View {
         let piece = TetrominoType(rawValue: shapeIndex) ?? .t
-        let matrix = piece.defaultMatrix
+        let matrix = piece.previewMatrix
         let color = piece.color
-        let miniCell: CGFloat = 8.0
+        let miniCell: CGFloat = 6.0
+        let miniSpacing: CGFloat = 1.5
 
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             Text("NEXT")
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.6))
+                .foregroundColor(.white.opacity(0.55))
+                .padding(.leading, 8)
 
-            // Mini grid for preview
-            VStack(spacing: 1) {
-                ForEach(0..<matrix.count, id: \.self) { y in
-                    HStack(spacing: 1) {
-                        ForEach(0..<matrix[y].count, id: \.self) { x in
-                            if matrix[y][x] != 0 {
-                                Rectangle()
-                                    .fill(color)
-                                    .frame(width: miniCell, height: miniCell)
-                            } else {
-                                Color.clear
-                                    .frame(width: miniCell, height: miniCell)
+            Rectangle()
+                .fill(Color.white.opacity(0.15))
+                .frame(width: 1, height: 14)
+
+            // Centered preview display area with consistent breathing room
+            ZStack {
+                VStack(spacing: miniSpacing) {
+                    ForEach(0..<matrix.count, id: \.self) { r in
+                        HStack(spacing: miniSpacing) {
+                            ForEach(0..<matrix[r].count, id: \.self) { c in
+                                if matrix[r][c] != 0 {
+                                    RoundedRectangle(cornerRadius: 1.5)
+                                        .fill(color)
+                                        .frame(width: miniCell, height: miniCell)
+                                } else {
+                                    Color.clear
+                                        .frame(width: miniCell, height: miniCell)
+                                }
                             }
                         }
                     }
                 }
             }
+            .frame(width: 30, height: 18)
+            .padding(.trailing, 8)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .frame(height: 32)
         .background(
-            Capsule()
-                .fill(Color.white.opacity(0.08))
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.white.opacity(0.12))
                 .overlay(
-                    Capsule()
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 0.8)
                 )
         )
     }

@@ -188,6 +188,19 @@ enum TetrominoType: Int, CaseIterable {
     var defaultMatrix: [[Int]] {
         allRotationStates[0]
     }
+
+    // Clean, geometrically-centered preview matrices for the HUD next piece indicator:
+    var previewMatrix: [[Int]] {
+        switch self {
+        case .t: return [[0, 1, 0], [1, 1, 1]]
+        case .o: return [[1, 1], [1, 1]]
+        case .i: return [[1, 1, 1, 1]]
+        case .l: return [[0, 0, 1], [1, 1, 1]]
+        case .j: return [[1, 0, 0], [1, 1, 1]]
+        case .s: return [[0, 1, 1], [1, 1, 0]]
+        case .z: return [[1, 1, 0], [0, 1, 1]]
+        }
+    }
 }
 
 struct GameConfig {
